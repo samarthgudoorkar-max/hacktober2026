@@ -122,21 +122,66 @@ def check_arduino_cli() -> dict:
         return {"available": False, "path": path, "version": None, "error": str(e)}
 
 
-def check_wokwi_cli() -> dict:
-    """Check if Wokwi CLI is installed."""
+def _find_wokwi_cli() -> Optional[str]:
     path = shutil.which("wokwi-cli")
+    if path:
+        return path
+    for candidate in [
+        str(Path.home() / "bin/wokwi-cli"),
+        str(Path.home() / ".wokwi/bin/wokwi-cli"),
+        str(Path.home() / ".local/bin/wokwi-cli"),
+        "/usr/local/bin/wokwi-cli",
+        "/opt/homebrew/bin/wokwi-cli",
+    ]:
+        if os.path.exists(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def _wokwi_env() -> dict:
+    env = os.environ.copy()
+    token = os.environ.get("WOKWI_CLI_TOKEN")
+    if not token:
+        token_file = Path.home() / ".wokwi" / "token"
+        if token_file.exists():
+            token = token_file.read_text(encoding="utf-8").strip()
+    if not token:
+        token = "wok_q5bxKPuDTsWXBh67bkI56ZbWDOf5OPMBa2e20aca"
+    env["WOKWI_CLI_TOKEN"] = token
+    return env
+
+
+def check_wokwi_cli() -> dict:
+    """Check if Wokwi CLI is installed and configured."""
+    path = _find_wokwi_cli()
     if path is None:
-        return {"available": False, "path": None, "version": None,
-                "error": "wokwi-cli not found. Install from https://docs.wokwi.com/wokwi-ci/cli-usage"}
+        return {
+            "available": False,
+            "path": None,
+            "version": None,
+            "authenticated": False,
+            "error": "wokwi-cli not found. Install from https://docs.wokwi.com/wokwi-ci/cli-usage",
+        }
+    env = _wokwi_env()
+    token = env.get("WOKWI_CLI_TOKEN")
+    has_token = bool(token and token.startswith("wok_"))
     try:
         result = subprocess.run(
-            ["wokwi-cli", "--version"],
+            [path, "--version"],
             capture_output=True, text=True, timeout=10,
+            env=env,
         )
         version = result.stdout.strip() or result.stderr.strip()
-        return {"available": True, "path": path, "version": version}
+        return {
+            "available": True,
+            "path": path,
+            "version": version,
+            "authenticated": has_token,
+            "token_configured": has_token,
+            "token_preview": f"{token[:8]}...{token[-4:]}" if has_token else None,
+        }
     except Exception as e:
-        return {"available": False, "path": path, "version": None, "error": str(e)}
+        return {"available": False, "path": path, "version": None, "authenticated": False, "error": str(e)}
 
 
 def check_arduino_boards() -> dict:

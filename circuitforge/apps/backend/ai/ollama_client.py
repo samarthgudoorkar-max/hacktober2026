@@ -380,11 +380,11 @@ def build_dynamic_spec(user_request: str, req_data: dict, gemma_data: Optional[d
                 gpio_pin=15, description='TFT SPI Chip Select'
             ))
             pin_assignments.append(PinAssignment(
-                component_id='tft_ili9341', component_instance=instance_id, component_pin='DC',
+                component_id='tft_ili9341', component_instance=instance_id, component_pin='D/C',
                 gpio_pin=2, description='TFT Data/Command Select'
             ))
             pin_assignments.append(PinAssignment(
-                component_id='tft_ili9341', component_instance=instance_id, component_pin='RESET',
+                component_id='tft_ili9341', component_instance=instance_id, component_pin='RST',
                 gpio_pin=4, description='TFT Reset'
             ))
             pin_assignments.append(PinAssignment(
@@ -664,8 +664,8 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
         lines.append(f"#define MQ135_PIN {pins.get('AOUT', 34)}")
     if "tft_ili9341" in comp_ids:
         lines.append(f"#define TFT_CS {pins.get('CS', 15)}")
-        lines.append(f"#define TFT_DC {pins.get('DC', 2)}")
-        lines.append(f"#define TFT_RST {pins.get('RESET', pins.get('RST', 4))}")
+        lines.append(f"#define TFT_DC {pins.get('D/C', pins.get('DC', 2))}")
+        lines.append(f"#define TFT_RST {pins.get('RST', pins.get('RESET', 4))}")
 
     lines.append(f"const float THRESHOLD_VAL = {thresh};")
     lines.append("")

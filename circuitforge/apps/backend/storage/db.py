@@ -4,6 +4,7 @@ Handles project persistence using SQLite metadata + local filesystem artifacts.
 """
 from __future__ import annotations
 import json
+import re
 import os
 import sys
 import uuid
@@ -125,10 +126,44 @@ async def get_project(project_id: str) -> Optional[Project]:
             return _row_to_project(dict(row))
 
 
+def _clean_diagram_json(diag_data: Optional[dict]) -> Optional[dict]:
+    if not isinstance(diag_data, dict) or "connections" not in diag_data:
+        return diag_data
+    clean_conns = []
+    for conn in diag_data.get("connections", []):
+        if not isinstance(conn, list) or len(conn) < 2:
+            clean_conns.append(conn)
+            continue
+        f_ref, t_ref = str(conn[0]), str(conn[1])
+        # Fix board GPIO and GND pins
+        f_ref = re.sub(r'board:GPIO(\d+)', r'board:D\1', f_ref)
+        f_ref = re.sub(r'board:GND(?:\.\d+)*\b', 'board:GND.1', f_ref)
+        t_ref = re.sub(r'board:GPIO(\d+)', r'board:D\1', t_ref)
+        t_ref = re.sub(r'board:GND(?:\.\d+)*\b', 'board:GND.1', t_ref)
+        # Fix TFT pins
+        f_ref = re.sub(r':DC\b', ':D/C', f_ref)
+        f_ref = re.sub(r':RESET\b', ':RST', f_ref)
+        t_ref = re.sub(r':DC\b', ':D/C', t_ref)
+        t_ref = re.sub(r':RESET\b', ':RST', t_ref)
+        # Fix button pins
+        f_ref = re.sub(r':1\.L\b', ':1.l', f_ref)
+        f_ref = re.sub(r':2\.L\b', ':2.l', f_ref)
+        f_ref = re.sub(r':LED\+\b', ':1.r', f_ref)
+        t_ref = re.sub(r':1\.L\b', ':1.l', t_ref)
+        t_ref = re.sub(r':2\.L\b', ':2.l', t_ref)
+        t_ref = re.sub(r':LED\+\b', ':1.r', t_ref)
+        color = conn[2] if len(conn) > 2 else "green"
+        clean_conns.append([f_ref, t_ref, color, []])
+    diag_data["connections"] = clean_conns
+    return diag_data
+
+
 async def update_project(project: Project) -> None:
     project.updated_at = datetime.utcnow().isoformat()
     ws_path = _ensure_workspace(project.id)
     project.workspace_path = str(ws_path)
+    if project.diagram_json:
+        project.diagram_json = _clean_diagram_json(project.diagram_json)
 
     async with aiosqlite.connect(str(DB_PATH)) as db:
         await db.execute(
@@ -177,6 +212,7 @@ async def _write_artifacts(project: Project) -> None:
 
     # diagram.json
     if project.diagram_json:
+        project.diagram_json = _clean_diagram_json(project.diagram_json)
         diag_file = ws / "diagram.json"
         tmp = diag_file.with_suffix(".tmp")
         tmp.write_text(json.dumps(project.diagram_json, indent=2), encoding="utf-8")
@@ -199,8 +235,8 @@ async def _write_artifacts(project: Project) -> None:
         board = project.spec.board.value
         toml_content = f"""[wokwi]
 version = 1
-firmware = "build/{project.name.replace(' ', '_')}.ino.bin"
-elf = "build/{project.name.replace(' ', '_')}.ino.elf"
+firmware = "build/sketch.ino.bin"
+elf = "build/sketch.ino.elf"
 
 [esp32]
 # ESP32 board configuration
@@ -379,7 +415,7 @@ def _row_to_project(row: dict) -> Project:
     diagram = None
     if row.get("diagram_json"):
         try:
-            diagram = json.loads(row["diagram_json"])
+            diagram = _clean_diagram_json(json.loads(row["diagram_json"]))
         except Exception:
             diagram = None
 

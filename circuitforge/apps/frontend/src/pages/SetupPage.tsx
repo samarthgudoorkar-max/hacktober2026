@@ -173,21 +173,24 @@ export default function SetupPage() {
 
             {/* Wokwi CLI */}
             <div className="forge-card p-5">
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Wokwi CLI</h2>
-              <p className="text-xs text-gray-600 mb-3">Optional — for automated simulation. Manual simulation via wokwi.com is always available.</p>
+              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">Wokwi CLI & Simulator</h2>
+              <p className="text-xs text-gray-600 mb-3">Enables local automated Wokwi simulations directly from CircuitForge</p>
               <StatusRow
                 ok={status.wokwi_cli.available}
-                label="Wokwi CLI"
+                label="Wokwi CLI Engine"
                 extra={status.wokwi_cli.version}
                 error={status.wokwi_cli.error}
               />
-              {!status.wokwi_cli.available && (
-                <div className="mt-3 p-3 bg-gray-800/50 rounded-lg text-xs text-gray-400">
-                  <p className="text-gray-400">
-                    Manual simulation via <a href="https://wokwi.com/" target="_blank" rel="noopener noreferrer" className="text-cyan-400">wokwi.com</a> is always available.
-                    For automated simulation, see{' '}
-                    <a href="https://docs.wokwi.com/wokwi-ci/cli-usage" target="_blank" rel="noopener noreferrer" className="text-cyan-400">Wokwi CI docs</a>.
-                  </p>
+              <StatusRow
+                ok={status.wokwi_cli.authenticated ?? false}
+                label="Wokwi CI License Token"
+                extra={status.wokwi_cli.token_preview ? `Configured (${status.wokwi_cli.token_preview})` : 'Token active'}
+                error={!status.wokwi_cli.authenticated ? 'Token not configured' : undefined}
+              />
+              {status.wokwi_cli.available && status.wokwi_cli.authenticated && (
+                <div className="mt-3 p-2.5 bg-emerald-950/40 border border-emerald-800/40 rounded-lg text-xs text-emerald-300 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Wokwi CLI is fully connected and authenticated. Automated simulations are active.</span>
                 </div>
               )}
             </div>

@@ -798,6 +798,157 @@ const COMPONENT_METAS: Record<string, ComponentMeta> = {
       </g>
     ),
   },
+
+  'wokwi-ntc-temperature-sensor': {
+    width: 65,
+    height: 75,
+    title: 'NTC Thermistor Sensor',
+    pins: [
+      { name: 'VCC', relX: 16, relY: 70, label: 'VCC', type: 'power' },
+      { name: 'OUT', relX: 32, relY: 70, label: 'OUT', type: 'analog' },
+      { name: 'GND', relX: 48, relY: 70, label: 'GND', type: 'ground' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={4} width={57} height={60} rx={4} fill="#0284c7" stroke={isSelected ? '#38bdf8' : '#0369a1'} strokeWidth={isSelected ? 2.5 : 1.5} />
+        <circle cx={32} cy={24} r={14} fill="#0f172a" stroke="#38bdf8" strokeWidth={1.5} />
+        <text x={32} y={28} fill="#38bdf8" fontSize={9} fontWeight="bold" fontFamily="monospace" textAnchor="middle">NTC</text>
+        <text x={32} y={52} fill="#bae6fd" fontSize={7} fontFamily="monospace" textAnchor="middle">TEMP</text>
+        {[16, 32, 48].map((px) => (
+          <line key={px} x1={px} y1={64} x2={px} y2={70} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-ky-040': {
+    width: 70,
+    height: 80,
+    title: 'KY-040 Rotary Encoder',
+    pins: [
+      { name: 'CLK', relX: 14, relY: 76, label: 'CLK', type: 'digital' },
+      { name: 'DT', relX: 26, relY: 76, label: 'DT', type: 'digital' },
+      { name: 'SW', relX: 38, relY: 76, label: 'SW', type: 'digital' },
+      { name: 'VCC', relX: 50, relY: 76, label: 'VCC', type: 'power' },
+      { name: 'GND', relX: 60, relY: 76, label: 'GND', type: 'ground' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={4} width={62} height={66} rx={4} fill="#1e293b" stroke={isSelected ? '#22d3ee' : '#334155'} strokeWidth={isSelected ? 2.5 : 1.5} />
+        <circle cx={35} cy={30} r={18} fill="#334155" stroke="#64748b" strokeWidth={2} />
+        <circle cx={35} cy={30} r={12} fill="#475569" />
+        <circle cx={35} cy={22} r={3} fill="#f1f5f9" />
+        <text x={35} y={58} fill="#94a3b8" fontSize={7} fontWeight="bold" fontFamily="monospace" textAnchor="middle">ENCODER</text>
+        {[14, 26, 38, 50, 60].map((px) => (
+          <line key={px} x1={px} y1={70} x2={px} y2={76} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-analog-joystick': {
+    width: 80,
+    height: 85,
+    title: 'Dual-Axis Analog Joystick',
+    pins: [
+      { name: 'GND', relX: 16, relY: 80, label: 'GND', type: 'ground' },
+      { name: 'VCC', relX: 30, relY: 80, label: 'VCC', type: 'power' },
+      { name: 'VERT', relX: 44, relY: 80, label: 'VRx', type: 'analog' },
+      { name: 'HORZ', relX: 58, relY: 80, label: 'VRy', type: 'analog' },
+      { name: 'SEL', relX: 70, relY: 80, label: 'SW', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={4} width={72} height={70} rx={6} fill="#0f172a" stroke={isSelected ? '#38bdf8' : '#334155'} strokeWidth={isSelected ? 2.5 : 1.5} />
+        <circle cx={40} cy={35} r={22} fill="#1e293b" stroke="#475569" strokeWidth={2} />
+        <circle cx={40} cy={35} r={14} fill="#334155" />
+        <circle cx={40} cy={35} r={7} fill="#64748b" />
+        <text x={40} y={64} fill="#94a3b8" fontSize={7} fontWeight="bold" fontFamily="monospace" textAnchor="middle">JOYSTICK</text>
+        {[16, 30, 44, 58, 70].map((px) => (
+          <line key={px} x1={px} y1={74} x2={px} y2={80} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-led-bar-graph': {
+    width: 90,
+    height: 55,
+    title: '10-Segment LED Bar Graph',
+    pins: [
+      { name: 'A1', relX: 10, relY: 50, label: '1', type: 'digital' },
+      { name: 'A2', relX: 26, relY: 50, label: '2', type: 'digital' },
+      { name: 'A3', relX: 42, relY: 50, label: '3', type: 'digital' },
+      { name: 'A4', relX: 58, relY: 50, label: '4', type: 'digital' },
+      { name: 'A5', relX: 74, relY: 50, label: '5', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={4} width={82} height={40} rx={3} fill="#1e293b" stroke={isSelected ? '#22d3ee' : '#475569'} strokeWidth={isSelected ? 2 : 1} />
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+          <rect key={i} x={9 + i * 7.5} y={10} width={5.5} height={20} rx={1} fill={i < 5 ? '#22c55e' : (i < 8 ? '#f59e0b' : '#ef4444')} opacity={0.85} />
+        ))}
+        <text x={45} y={38} fill="#94a3b8" fontSize={6} fontFamily="monospace" textAnchor="middle">BAR GRAPH</text>
+        {[10, 26, 42, 58, 74].map((px) => (
+          <line key={px} x1={px} y1={44} x2={px} y2={50} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-7segment': {
+    width: 60,
+    height: 80,
+    title: '7-Segment LED Display',
+    pins: [
+      { name: 'A', relX: 12, relY: 75, label: 'A', type: 'digital' },
+      { name: 'B', relX: 24, relY: 75, label: 'B', type: 'digital' },
+      { name: 'C', relX: 36, relY: 75, label: 'C', type: 'digital' },
+      { name: 'D', relX: 48, relY: 75, label: 'D', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={4} width={52} height={66} rx={4} fill="#090d16" stroke={isSelected ? '#ef4444' : '#334155'} strokeWidth={isSelected ? 2.5 : 1.5} />
+        <rect x={16} y={12} width={28} height={5} rx={1.5} fill="#ef4444" />
+        <rect x={40} y={15} width={5} height={20} rx={1.5} fill="#ef4444" />
+        <rect x={40} y={35} width={5} height={20} rx={1.5} fill="#ef4444" />
+        <rect x={16} y={33} width={28} height={5} rx={1.5} fill="#ef4444" />
+        <rect x={15} y={15} width={5} height={20} rx={1.5} fill="#7f1d1d" opacity={0.4} />
+        <rect x={15} y={35} width={5} height={20} rx={1.5} fill="#ef4444" />
+        <rect x={16} y={53} width={28} height={5} rx={1.5} fill="#ef4444" />
+        <circle cx={47} cy={55} r={2.5} fill="#ef4444" />
+        {[12, 24, 36, 48].map((px) => (
+          <line key={px} x1={px} y1={70} x2={px} y2={75} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-dip-switch-8': {
+    width: 95,
+    height: 55,
+    title: '8-Position DIP Switch',
+    pins: [
+      { name: '1', relX: 14, relY: 50, label: '1', type: 'digital' },
+      { name: '2', relX: 34, relY: 50, label: '2', type: 'digital' },
+      { name: '3', relX: 54, relY: 50, label: '3', type: 'digital' },
+      { name: '4', relX: 74, relY: 50, label: '4', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={4} width={87} height={40} rx={3} fill="#dc2626" stroke={isSelected ? '#fca5a5' : '#991b1b'} strokeWidth={isSelected ? 2 : 1} />
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+          <g key={i}>
+            <rect x={10 + i * 10} y={10} width={7} height={22} rx={1} fill="#ffffff" />
+            <rect x={10 + i * 10} y={i % 2 === 0 ? 12 : 22} width={7} height={10} rx={1} fill="#1e293b" />
+          </g>
+        ))}
+        {[14, 34, 54, 74].map((px) => (
+          <line key={px} x1={px} y1={44} x2={px} y2={50} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
 }
 
 // Fallback generic component

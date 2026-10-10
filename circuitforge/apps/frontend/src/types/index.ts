@@ -141,7 +141,14 @@ export interface SystemStatus {
   }
   arduino_cli: { available: boolean; version?: string; path?: string; error?: string }
   arduino_boards: { installed?: boolean; esp32_installed?: boolean; error?: string }
-  wokwi_cli: { available: boolean; version?: string; error?: string }
+  wokwi_cli: {
+    available: boolean
+    version?: string
+    authenticated?: boolean
+    token_configured?: boolean
+    token_preview?: string
+    error?: string
+  }
 }
 
 export interface CatalogComponent {

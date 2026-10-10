@@ -1,37 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { Cpu, Zap, Thermometer, Radio, Volume2, ArrowRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Cpu, Zap, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { createProject, planProject, getErrorMessage, getSystemStatus } from '../utils/api'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { ComponentCatalog } from '../components/ComponentCatalog'
 import type { SystemStatus } from '../types'
-
-const EXAMPLES = [
-  {
-    icon: Thermometer,
-    title: 'Temperature Monitor',
-    text: 'Create an ESP32-based temperature monitor using a DHT22 sensor. Turn on an LED when the temperature exceeds 30 degrees Celsius.',
-    color: 'text-orange-400',
-  },
-  {
-    icon: Radio,
-    title: 'Distance Warning',
-    text: 'Build an ultrasonic distance sensor system with ESP32 and HC-SR04. Activate a buzzer when an object comes within 20cm.',
-    color: 'text-blue-400',
-  },
-  {
-    icon: Zap,
-    title: 'LED Controller',
-    text: 'Create an ESP32 project with a push button to toggle an LED. Add a potentiometer to control LED brightness via PWM.',
-    color: 'text-yellow-400',
-  },
-  {
-    icon: Volume2,
-    title: 'Alert System',
-    text: 'Make an ESP32 project that reads a DHT22 sensor and sounds a buzzer when temperature exceeds 35°C or humidity exceeds 80%.',
-    color: 'text-red-400',
-  },
-]
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -63,6 +37,21 @@ export default function HomePage() {
     }
   }, [request, navigate])
 
+  const handleSelectComponent = useCallback((compName: string) => {
+    setRequest((prev) => {
+      const trimmed = prev.trim()
+      if (!trimmed) {
+        return `ESP32 project with ${compName}`
+      }
+      if (trimmed.toLowerCase().includes(compName.toLowerCase())) {
+        toast('Component already in description', { icon: 'ℹ️' })
+        return prev
+      }
+      return `${trimmed}, including a ${compName}`
+    })
+    toast.success(`Added ${compName} to project description`)
+  }, [])
+
   return (
     <div className="min-h-screen circuit-bg flex flex-col">
       {/* Header */}
@@ -73,34 +62,34 @@ export default function HomePage() {
           </div>
           <span className="text-xl font-bold text-white">CircuitForge <span className="text-cyan-400">AI</span></span>
           <div className="flex-1" />
-          <a href="/setup" className="text-sm text-gray-400 hover:text-cyan-400 transition-colors">
+          <Link to="/setup" className="text-sm text-gray-400 hover:text-cyan-400 transition-colors">
             System Setup
-          </a>
-          <a href="/projects" className="text-sm text-gray-400 hover:text-cyan-400 transition-colors ml-4 mr-4">
+          </Link>
+          <Link to="/projects" className="text-sm text-gray-400 hover:text-cyan-400 transition-colors ml-4 mr-4">
             Projects
-          </a>
+          </Link>
           <ThemeToggle />
         </div>
       </header>
 
       {/* Hero */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="text-center mb-12 max-w-2xl">
-          <div className="inline-flex items-center gap-2 bg-cyan-900/30 border border-cyan-800 rounded-full px-4 py-1.5 mb-6 text-sm text-cyan-400">
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div className="text-center mb-8 max-w-2xl">
+          <div className="inline-flex items-center gap-2 bg-cyan-900/30 border border-cyan-800 rounded-full px-4 py-1.5 mb-5 text-sm text-cyan-400">
             <span className="w-2 h-2 rounded-full bg-cyan-400 pulse-dot inline-block" />
             Local-First · AI-Powered · Privacy Preserving
           </div>
-          <h1 className="text-5xl font-bold text-white mb-4 leading-tight">
+          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 leading-tight">
             Describe your IoT idea.<br />
             <span className="text-cyan-400">We build the circuit.</span>
           </h1>
-          <p className="text-gray-400 text-lg leading-relaxed">
+          <p className="text-gray-400 text-base sm:text-lg leading-relaxed">
             From natural language to validated circuits, Arduino firmware, and Wokwi simulations —
             all locally on your machine.
           </p>
 
           {sysStatus && (
-            <div className="flex flex-wrap items-center justify-center gap-2.5 mt-6 text-xs">
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-5 text-xs">
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${sysStatus.ollama.available ? 'bg-cyan-950/60 border-cyan-800 text-cyan-300' : 'bg-amber-950/60 border-amber-800 text-amber-300'}`}>
                 {sysStatus.ollama.available ? <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> : <AlertCircle className="w-3.5 h-3.5 text-amber-400" />}
                 Ollama: {sysStatus.ollama.available ? `${[sysStatus.models.planner?.installed, sysStatus.models.firmware_generator?.installed].filter(Boolean).length}/2 models ready` : 'Catalog Fallback'}
@@ -108,6 +97,10 @@ export default function HomePage() {
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${sysStatus.arduino_cli.available ? 'bg-indigo-950/60 border-indigo-800 text-indigo-300' : 'bg-gray-800 border-gray-700 text-gray-400'}`}>
                 {sysStatus.arduino_cli.available ? <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> : <AlertCircle className="w-3.5 h-3.5 text-gray-500" />}
                 Arduino CLI: {sysStatus.arduino_cli.available ? 'v1.5.1' : 'Not installed'}
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${sysStatus.wokwi_cli?.available ? 'bg-teal-950/60 border-teal-800 text-teal-300' : 'bg-gray-800 border-gray-700 text-gray-400'}`}>
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" />
+                Wokwi CLI: {sysStatus.wokwi_cli?.available ? 'Ready (Licensed)' : 'Manual Mode'}
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border bg-emerald-950/60 border-emerald-800 text-emerald-300">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -118,17 +111,17 @@ export default function HomePage() {
         </div>
 
         {/* Input */}
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-4xl">
           <div className="forge-card p-6 glow-cyan">
             <label className="block text-sm font-medium text-gray-400 mb-3">
               Describe your IoT project
             </label>
             <textarea
               className="forge-input resize-none text-base leading-relaxed mb-4"
-              rows={4}
+              rows={3}
               value={request}
               onChange={e => setRequest(e.target.value)}
-              placeholder="Create an ESP32-based temperature monitor using a DHT22 sensor. Turn on an LED when temperature exceeds 30°C..."
+              placeholder="e.g. Build an ESP32 weather station with DHT22, SSD1306 OLED display, and buzzer alert..."
               disabled={loading}
               onKeyDown={e => {
                 if (e.key === 'Enter' && e.metaKey) handleCreate()
@@ -139,7 +132,7 @@ export default function HomePage() {
                 {request.length} chars · ⌘+Enter to submit
               </span>
               <button
-                className="btn-primary text-base px-6 py-3"
+                className="btn-primary text-base px-6 py-2.5"
                 onClick={() => handleCreate()}
                 disabled={loading || request.trim().length < 10}
               >
@@ -152,37 +145,14 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Examples */}
-          <div className="mt-6">
-            <p className="text-xs text-gray-600 mb-3 uppercase tracking-wider">Example projects</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {EXAMPLES.map(ex => (
-                <button
-                  key={ex.title}
-                  className="text-left forge-card p-4 hover:border-gray-700 transition-all group cursor-pointer"
-                  onClick={() => { setRequest(ex.text); handleCreate(ex.text) }}
-                  disabled={loading}
-                >
-                  <div className="flex items-start gap-3">
-                    <ex.icon className={`w-5 h-5 mt-0.5 ${ex.color} shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-gray-200 group-hover:text-white mb-1 flex items-center gap-1">
-                        {ex.title}
-                        <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
-                      </div>
-                      <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{ex.text}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* Available Components Catalog */}
+          <ComponentCatalog onSelectComponent={handleSelectComponent} />
         </div>
       </main>
 
       {/* Footer */}
       <footer className="border-t border-gray-800 py-4 text-center text-xs text-gray-700">
-        CircuitForge AI · Local-first · No cloud AI · All inference runs on your machine
+        CircuitForge AI · Local-first · Wokwi CLI Connected · No cloud AI required
       </footer>
     </div>
   )

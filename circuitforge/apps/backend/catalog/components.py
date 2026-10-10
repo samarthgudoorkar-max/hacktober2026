@@ -287,8 +287,8 @@ TFT_ILI9341 = CatalogComponent(
         ComponentPin(name="VCC",   description="Power supply 3.3V",   pin_type="power",   required=True),
         ComponentPin(name="GND",   description="Ground",              pin_type="ground",  required=True),
         ComponentPin(name="CS",    description="Chip Select (SPI)",   pin_type="digital", required=True),
-        ComponentPin(name="RESET", description="Reset line",          pin_type="digital", required=True),
-        ComponentPin(name="DC",    description="Data/Command select", pin_type="digital", required=True),
+        ComponentPin(name="RST",   description="Reset line",          pin_type="digital", required=True),
+        ComponentPin(name="D/C",   description="Data/Command select", pin_type="digital", required=True),
         ComponentPin(name="MOSI",  description="SPI Data input",      pin_type="digital", required=True),
         ComponentPin(name="SCK",   description="SPI Clock",           pin_type="digital", required=True),
         ComponentPin(name="LED",   description="Backlight 3.3V",      pin_type="power",   required=False),
@@ -296,12 +296,12 @@ TFT_ILI9341 = CatalogComponent(
     ],
     wiring_rules=[
         WiringRule(from_pin="VCC", to_component="esp32", to_pin="3V3", description="3.3V power"),
-        WiringRule(from_pin="GND", to_component="esp32", to_pin="GND", description="Ground"),
-        WiringRule(from_pin="CS", to_component="esp32", to_pin="GPIO15", description="SPI Chip Select"),
-        WiringRule(from_pin="DC", to_component="esp32", to_pin="GPIO2", description="SPI Data/Command"),
-        WiringRule(from_pin="RESET", to_component="esp32", to_pin="GPIO4", description="Display Reset"),
-        WiringRule(from_pin="MOSI", to_component="esp32", to_pin="GPIO23", description="SPI MOSI"),
-        WiringRule(from_pin="SCK", to_component="esp32", to_pin="GPIO18", description="SPI Clock"),
+        WiringRule(from_pin="GND", to_component="esp32", to_pin="GND.1", description="Ground"),
+        WiringRule(from_pin="CS", to_component="esp32", to_pin="D15", description="SPI Chip Select"),
+        WiringRule(from_pin="D/C", to_component="esp32", to_pin="D2", description="SPI Data/Command"),
+        WiringRule(from_pin="RST", to_component="esp32", to_pin="D4", description="Display Reset"),
+        WiringRule(from_pin="MOSI", to_component="esp32", to_pin="D23", description="SPI MOSI"),
+        WiringRule(from_pin="SCK", to_component="esp32", to_pin="D18", description="SPI Clock"),
     ],
     libraries=["Adafruit GFX Library", "Adafruit ILI9341"],
     unit_price_inr=650.0,
@@ -606,6 +606,139 @@ MEMBRANE_KEYPAD = CatalogComponent(
     electrical_constraints=["8 digital GPIO lines required for row/column scanning"],
 )
 
+# ── NTC Temperature Sensor ───────────────────────────────────────────────────
+
+NTC_TEMPERATURE = CatalogComponent(
+    id="ntc_temperature",
+    name="NTC Temperature Sensor (Thermistor)",
+    category="sensor",
+    wokwi_id="wokwi-ntc-temperature-sensor",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="OUT", description="Analog Output", pin_type="analog", required=True),
+        ComponentPin(name="VCC", description="3.3V Power", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+    ],
+    unit_price_inr=30.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Negative Temperature Coefficient thermistor module for temperature measurement",
+    electrical_constraints=["Connect to ADC pin (GPIO32-39 on ESP32)", "3.3V supply"],
+)
+
+# ── KY-040 Rotary Encoder ─────────────────────────────────────────────────────
+
+ROTARY_ENCODER = CatalogComponent(
+    id="rotary_encoder",
+    name="KY-040 Rotary Encoder",
+    category="input",
+    wokwi_id="wokwi-ky-040",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="CLK", description="Clock output A", pin_type="digital", required=True),
+        ComponentPin(name="DT", description="Data output B", pin_type="digital", required=True),
+        ComponentPin(name="SW", description="Pushbutton switch", pin_type="digital", required=False),
+        ComponentPin(name="VCC", description="Power 3.3V", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+    ],
+    unit_price_inr=90.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Incremental 360-degree rotary encoder with integrated push button",
+    electrical_constraints=["Requires interrupt-capable GPIO pins for CLK and DT", "Internal pull-ups recommended"],
+)
+
+# ── Analog Joystick Module ────────────────────────────────────────────────────
+
+ANALOG_JOYSTICK = CatalogComponent(
+    id="analog_joystick",
+    name="Dual-Axis Analog Joystick",
+    category="input",
+    wokwi_id="wokwi-analog-joystick",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="VERT", description="Y-axis analog output", pin_type="analog", required=True),
+        ComponentPin(name="HORZ", description="X-axis analog output", pin_type="analog", required=True),
+        ComponentPin(name="SEL", description="Switch / push button", pin_type="digital", required=False),
+        ComponentPin(name="VCC", description="Power 3.3V", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+    ],
+    unit_price_inr=110.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Dual potentiometer thumb joystick with center push button",
+    electrical_constraints=["Requires 2 ADC analog inputs and 1 digital input"],
+)
+
+# ── 10-Segment LED Bar Graph ──────────────────────────────────────────────────
+
+LED_BAR_GRAPH = CatalogComponent(
+    id="led_bar_graph",
+    name="10-Segment LED Bar Graph",
+    category="display",
+    wokwi_id="wokwi-led-bar-graph",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="A1", description="Anode segment 1", pin_type="digital", required=True),
+        ComponentPin(name="A2", description="Anode segment 2", pin_type="digital", required=True),
+        ComponentPin(name="A3", description="Anode segment 3", pin_type="digital", required=True),
+        ComponentPin(name="A4", description="Anode segment 4", pin_type="digital", required=True),
+        ComponentPin(name="A5", description="Anode segment 5", pin_type="digital", required=True),
+        ComponentPin(name="C1", description="Cathode segment 1", pin_type="ground", required=True),
+    ],
+    unit_price_inr=45.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="10-level LED indicator bar graph for volume or level meters",
+    electrical_constraints=["Current-limiting resistors required per active segment"],
+)
+
+# ── 7-Segment Display ─────────────────────────────────────────────────────────
+
+SEVEN_SEGMENT = CatalogComponent(
+    id="seven_segment",
+    name="7-Segment LED Display",
+    category="display",
+    wokwi_id="wokwi-7segment",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="A", description="Segment A", pin_type="digital", required=True),
+        ComponentPin(name="B", description="Segment B", pin_type="digital", required=True),
+        ComponentPin(name="C", description="Segment C", pin_type="digital", required=True),
+        ComponentPin(name="D", description="Segment D", pin_type="digital", required=True),
+        ComponentPin(name="E", description="Segment E", pin_type="digital", required=True),
+        ComponentPin(name="F", description="Segment F", pin_type="digital", required=True),
+        ComponentPin(name="G", description="Segment G", pin_type="digital", required=True),
+        ComponentPin(name="COM", description="Common pin", pin_type="ground", required=True),
+    ],
+    unit_price_inr=25.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Classic 1-digit 7-segment numerical LED display",
+    electrical_constraints=["Current limiting resistors required"],
+)
+
+# ── 8-Position DIP Switch ─────────────────────────────────────────────────────
+
+DIP_SWITCH_8 = CatalogComponent(
+    id="dip_switch_8",
+    name="8-Position DIP Switch",
+    category="input",
+    wokwi_id="wokwi-dip-switch-8",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="1", description="Switch 1", pin_type="digital", required=True),
+        ComponentPin(name="2", description="Switch 2", pin_type="digital", required=True),
+        ComponentPin(name="3", description="Switch 3", pin_type="digital", required=True),
+        ComponentPin(name="4", description="Switch 4", pin_type="digital", required=True),
+    ],
+    unit_price_inr=35.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="8-way slide DIP configuration switch array",
+    electrical_constraints=["Use internal pull-ups on inputs"],
+)
+
 
 # ── Catalog Registry ──────────────────────────────────────────────────────────
 
@@ -636,6 +769,12 @@ CATALOG: dict[str, CatalogComponent] = {
         TFT_ILI9341,
         MPU6050,
         MEMBRANE_KEYPAD,
+        NTC_TEMPERATURE,
+        ROTARY_ENCODER,
+        ANALOG_JOYSTICK,
+        LED_BAR_GRAPH,
+        SEVEN_SEGMENT,
+        DIP_SWITCH_8,
     ]
 }
 

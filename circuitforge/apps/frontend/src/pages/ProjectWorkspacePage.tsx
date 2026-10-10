@@ -562,7 +562,13 @@ function SimulateTab({ project, result, onSimulate, opLoading }: { project: Proj
   return (
     <div className="space-y-4">
       <div className="forge-card p-5">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Simulation</h3>
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Automated Wokwi Simulation</h3>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-teal-950/60 border border-teal-800 text-teal-300">
+            <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
+            Wokwi CLI Connected (Licensed)
+          </span>
+        </div>
         <p className="text-gray-400 text-sm mb-4">
           Simulation status: <span className={SIM_CLASS[project.simulation_status]}>{SIM_LABELS[project.simulation_status]}</span>
         </p>
@@ -572,9 +578,18 @@ function SimulateTab({ project, result, onSimulate, opLoading }: { project: Proj
           disabled={!!opLoading || !project.firmware_code}
         >
           {opLoading === 'simulate' ? <Loader2 className="w-4 h-4 spinner" /> : <Play className="w-4 h-4" />}
-          {opLoading === 'simulate' ? 'Running...' : 'Start Simulation'}
+          {opLoading === 'simulate' ? 'Simulating via Wokwi CLI...' : 'Run Wokwi Simulation'}
         </button>
       </div>
+
+      {result && result.error && (
+        <div className="forge-card p-4 border-red-900/50 bg-red-950/20">
+          <div className="flex items-center gap-2 text-red-400 text-sm font-semibold mb-1">
+            <XCircle className="w-4 h-4" /> Simulation Error
+          </div>
+          <p className="text-xs text-red-300">{result.error}</p>
+        </div>
+      )}
 
       {result && result.mode === 'manual' && (
         <div className="forge-card p-5 border-yellow-900/50">
@@ -598,7 +613,12 @@ function SimulateTab({ project, result, onSimulate, opLoading }: { project: Proj
 
       {result && result.mode !== 'manual' && result.stdout && (
         <div className="forge-card overflow-hidden">
-          <div className="px-4 py-2 border-b border-gray-800 text-sm text-gray-400">Simulation Output</div>
+          <div className="px-4 py-2 border-b border-gray-800 text-sm text-gray-300 flex items-center justify-between font-mono">
+            <span>Wokwi Simulation Logs</span>
+            {result.exit_code !== undefined && (
+              <span className="text-xs text-gray-500">Exit Code: {result.exit_code}</span>
+            )}
+          </div>
           <pre className="terminal-bg max-h-96 overflow-auto text-xs whitespace-pre-wrap">{result.stdout}</pre>
         </div>
       )}

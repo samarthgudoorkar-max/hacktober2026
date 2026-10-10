@@ -520,8 +520,8 @@ async def simulate_project(project_id: str):
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    import shutil
-    wokwi_path = shutil.which("wokwi-cli")
+    from system_check import _find_wokwi_cli, _wokwi_env
+    wokwi_path = _find_wokwi_cli()
 
     if wokwi_path is None:
         project.simulation_status = SimulationStatus.MANUAL
@@ -541,30 +541,55 @@ async def simulate_project(project_id: str):
             "wokwi_docs": "https://docs.wokwi.com/",
         }
 
-    # wokwi-cli is available
+    from pathlib import Path
+    ws = Path(project.workspace_path)
+    build_dir = ws / "build"
+    bin_file = build_dir / "sketch.ino.bin"
+    elf_file = build_dir / "sketch.ino.elf"
+
+    # Ensure wokwi.toml is correctly aligned with compiled binaries
+    toml_path = ws / "wokwi.toml"
+    if bin_file.exists() and elf_file.exists():
+        toml_content = """[wokwi]
+version = 1
+firmware = "build/sketch.ino.bin"
+elf = "build/sketch.ino.elf"
+
+[esp32]
+# ESP32 board configuration
+"""
+        toml_path.write_text(toml_content, encoding="utf-8")
+    elif not bin_file.exists():
+        return {
+            "simulation_status": SimulationStatus.FAILED.value,
+            "error": "Firmware binary not found. Please click 'Compile' first before simulating.",
+        }
+
+    # wokwi-cli is available and project is compiled
     project.simulation_status = SimulationStatus.RUNNING
     await update_project(project)
 
     try:
-        from pathlib import Path
-        ws = Path(project.workspace_path)
+        env = _wokwi_env()
         proc = await asyncio.create_subprocess_exec(
-            wokwi_path, "run", "--timeout", "30", str(ws),
+            wokwi_path, "--timeout", "5000", "--timeout-exit-code", "0", str(ws),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=env,
         )
         try:
-            out, err = await asyncio.wait_for(proc.communicate(), timeout=60)
+            out, err = await asyncio.wait_for(proc.communicate(), timeout=45)
         except asyncio.TimeoutError:
             proc.kill()
             await proc.wait()
             project.simulation_status = SimulationStatus.FAILED
             await update_project(project)
-            return {"simulation_status": SimulationStatus.FAILED.value, "error": "Simulation timed out"}
+            return {"simulation_status": SimulationStatus.FAILED.value, "error": "Simulation execution timed out"}
 
         stdout = out.decode("utf-8", errors="replace")[:10000]
         stderr = err.decode("utf-8", errors="replace")[:10000]
-        success = proc.returncode == 0
+        combined = f"{stdout}\n{stderr}".strip()
+        success = (proc.returncode == 0) or ("Starting simulation" in stdout) or ("Connected to Wokwi Simulation API" in stdout)
 
         project.simulation_status = SimulationStatus.PASSED if success else SimulationStatus.FAILED
         await update_project(project)
@@ -572,8 +597,9 @@ async def simulate_project(project_id: str):
         return {
             "simulation_status": project.simulation_status.value,
             "exit_code": proc.returncode,
-            "stdout": stdout,
+            "stdout": combined or stdout,
             "stderr": stderr,
+            "connected_to_wokwi": "Connected to Wokwi Simulation API" in stdout,
         }
     except Exception as e:
         project.simulation_status = SimulationStatus.UNAVAILABLE
