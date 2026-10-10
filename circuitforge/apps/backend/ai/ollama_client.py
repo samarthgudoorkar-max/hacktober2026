@@ -375,18 +375,18 @@ Components:
 
 Requirements:
 - Include all required library headers (use <Adafruit_Sensor.h> if using DHT sensor)
-- Explicitly define each pin as a constant integer or macro before using it, for example:
-  #define DHTPIN 4
-  #define LED_PIN 2
-- Never use undeclared variable names like led_1 or dht22_1 without defining them as integer pins
-- Include setup() and loop() functions
-- Set correct pinMode() for all inputs and outputs in setup()
-- Handle sensor read errors gracefully
-- Use Serial.begin(115200) in setup()
-- Print sensor readings to Serial
-- Follow exact pin assignments provided above
+- Explicitly define each pin as a constant integer or macro before using it:
+{pin_definitions}
+- STRICT PROHIBITION: Use ONLY the components and pins listed above.
+- If an LED is NOT listed in components, NEVER define or use LED, LED_PIN, or digitalWrite for an LED.
+- If a DHT sensor is NOT listed in components, NEVER include DHT.h or use DHT.
+- If a buzzer is NOT listed in components, NEVER use buzzer or BUZZER_PIN.
+- Never use Servo.h or SoftwareSerial.h on ESP32.
+- Include setup() and loop() functions.
+- Set correct pinMode() for all inputs and outputs in setup().
+- Use Serial.begin(115200) in setup().
 
-Generate ONLY the Arduino C++ code, starting with the #include statements.
+Generate ONLY the Arduino C++ code block starting with #include statements.
 Do NOT add explanations outside the code. The output must compile cleanly with Arduino CLI for ESP32.
 """
 
@@ -395,7 +395,7 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
     """
     Synthesize complete, compilable Arduino C++ firmware matching the exact components,
     pin assignments, thresholds, and behavior defined in ProjectSpec.
-    Handles any component combination (DHT22, HC-SR04, Potentiometer, LED, Buzzer, Button).
+    Never introduces components (like LEDs or buzzers) that are not in spec.components.
     """
     pins = {pa.component_pin.upper(): pa.gpio_pin for pa in spec.pin_assignments}
     comp_ids = {c.catalog_id for c in spec.components}
@@ -486,6 +486,19 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
         lines.append('  if (isnan(t) || isnan(h)) { Serial.println(F("[ERROR] Failed reading DHT22")); return; }')
         lines.append('  Serial.print(F("Temp: ")); Serial.print(t, 1); Serial.print(F(" C | Humidity: ")); Serial.print(h, 1); Serial.println(F(" %"));')
         lines.append("  bool alarm = (t > THRESHOLD_VAL);")
+    elif "hc_sr04" in comp_ids and "potentiometer_10k" in comp_ids:
+        lines.append("  int potRaw = analogRead(POT_PIN);")
+        lines.append("  float dynamicDistThresh = 5.0 + (potRaw / 4095.0) * 45.0;")
+        lines.append("  digitalWrite(TRIG_PIN, LOW);")
+        lines.append("  delayMicroseconds(2);")
+        lines.append("  digitalWrite(TRIG_PIN, HIGH);")
+        lines.append("  delayMicroseconds(10);")
+        lines.append("  digitalWrite(TRIG_PIN, LOW);")
+        lines.append("  long duration = pulseIn(ECHO_PIN, HIGH, 30000);")
+        lines.append("  float distanceCm = (duration > 0) ? (duration * 0.0343 / 2.0) : 999.0;")
+        lines.append('  Serial.print(F("Distance: ")); Serial.print(distanceCm, 1); Serial.print(F(" cm | Thresh: ")); Serial.println(dynamicDistThresh, 1);')
+        lines.append("  bool alarm = (distanceCm < dynamicDistThresh);")
+        lines.append("  delay(200);")
     elif "hc_sr04" in comp_ids:
         lines.append("  digitalWrite(TRIG_PIN, LOW);")
         lines.append("  delayMicroseconds(2);")
@@ -497,27 +510,107 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
         lines.append('  Serial.print(F("Distance: ")); Serial.print(distanceCm, 1); Serial.println(F(" cm"));')
         lines.append("  bool alarm = (distanceCm < THRESHOLD_VAL);")
         lines.append("  delay(200);")
+    elif "push_button" in comp_ids:
+        lines.append("  bool alarm = (digitalRead(BUTTON_PIN) == LOW); // Pressed")
+        lines.append('  if (alarm) { Serial.println(F("Button Pressed!")); }')
+        lines.append("  delay(50);")
+    elif "potentiometer_10k" in comp_ids:
+        lines.append("  int potVal = analogRead(POT_PIN);")
+        lines.append('  Serial.print(F("Potentiometer value: ")); Serial.println(potVal);')
+        lines.append("  bool alarm = (potVal > 2048);")
+        lines.append("  delay(200);")
     else:
         lines.append("  delay(1000);")
         lines.append("  bool alarm = false;")
 
+    # Actuators
+    has_actuator = False
     if "led_red" in comp_ids:
         lines.append("  digitalWrite(LED_PIN, alarm ? HIGH : LOW);")
+        has_actuator = True
     if "buzzer" in comp_ids:
         lines.append("  digitalWrite(BUZZER_PIN, alarm ? HIGH : LOW);")
+        has_actuator = True
+
+    if not has_actuator:
+        lines.append('  if (alarm) { Serial.println(F("[ALERT] Trigger condition active!")); }')
 
     lines.append("}")
     return "\n".join(lines)
 
 
+def validate_firmware_against_spec(code: str, spec: ProjectSpec) -> tuple[bool, list[str]]:
+    """
+    Validate that generated firmware strictly matches the hardware specification.
+    Catches model hallucinations (e.g. generating LED or DHT code when not in spec).
+    """
+    comp_ids = {c.catalog_id for c in spec.components}
+    errors = []
+
+    # 1. Basic C++ structure
+    if "void setup()" not in code or "void loop()" not in code:
+        errors.append("Missing setup() or loop() functions")
+
+    # 2. Hallucinated components (MUST NOT be in code if NOT in spec)
+    if "led_red" not in comp_ids:
+        if re.search(r'\bLED\b|\bLED_PIN\b|\bledPin\b|digitalWrite\s*\(\s*(?:LED_PIN|2\b)', code, re.IGNORECASE):
+            errors.append("Hallucinated LED in firmware when LED is not in project components")
+
+    if "buzzer" not in comp_ids:
+        if re.search(r'\bBUZZER\b|\bBUZZER_PIN\b|\bbuzzerPin\b|\btone\s*\(', code, re.IGNORECASE):
+            errors.append("Hallucinated Buzzer in firmware when Buzzer is not in project components")
+
+    if "dht22" not in comp_ids:
+        if re.search(r'\bDHT\b|\bDHTPIN\b|<DHT\.h>', code, re.IGNORECASE):
+            errors.append("Hallucinated DHT in firmware when DHT22 is not in project components")
+
+    if "hc_sr04" not in comp_ids:
+        if re.search(r'\bTRIG_PIN\b|\bECHO_PIN\b|\bpulseIn\b', code, re.IGNORECASE):
+            errors.append("Hallucinated Ultrasonic in firmware when HC-SR04 is not in project components")
+
+    if "potentiometer_10k" not in comp_ids:
+        if re.search(r'\bPOT_PIN\b|\bpotPin\b', code, re.IGNORECASE):
+            errors.append("Hallucinated Potentiometer in firmware when Potentiometer is not in project components")
+
+    if "push_button" not in comp_ids:
+        if re.search(r'\bBUTTON_PIN\b|\bbuttonPin\b', code, re.IGNORECASE):
+            errors.append("Hallucinated Button in firmware when Button is not in project components")
+
+    if re.search(r'<SoftwareSerial\.h>|<Servo\.h>|myservo', code, re.IGNORECASE):
+        errors.append("Incompatible library (SoftwareSerial or Servo) for ESP32")
+
+    # 3. Missing required components (MUST be in code if in spec)
+    if "hc_sr04" in comp_ids and not re.search(r'pulseIn|\bTRIG\b', code, re.IGNORECASE):
+        errors.append("Missing ultrasonic pulseIn/trigger logic")
+
+    if "dht22" in comp_ids and not re.search(r'\bdht\b|\bDHT\b', code, re.IGNORECASE):
+        errors.append("Missing DHT sensor reading logic")
+
+    if "potentiometer_10k" in comp_ids and not re.search(r'analogRead', code, re.IGNORECASE):
+        errors.append("Missing potentiometer analogRead logic")
+
+    if "led_red" in comp_ids and not re.search(r'\bLED\b|\bled\b|digitalWrite', code, re.IGNORECASE):
+        errors.append("Missing LED actuation logic")
+
+    if "buzzer" in comp_ids and not re.search(r'\bBUZZER\b|\bbuzzer\b|\btone\b|digitalWrite', code, re.IGNORECASE):
+        errors.append("Missing buzzer actuation logic")
+
+    return len(errors) == 0, errors
+
+
 async def generate_firmware(spec: ProjectSpec) -> tuple[str, str]:
     """
-    Use Arduino-Coder-0.5B to generate firmware.
-    Falls back to verified catalog template if Ollama is unreachable.
+    Generate firmware matching ProjectSpec.
+    Validates model output against spec to guarantee no hallucinated components.
+    Falls back to verified modular synthesizer if model output is invalid or contains hallucinated parts.
     Returns (firmware_code, raw_response).
     """
     pin_lines = "\n".join(
         f"  - {pa.component_instance}.{pa.component_pin} -> GPIO{pa.gpio_pin} ({pa.description})"
+        for pa in spec.pin_assignments
+    )
+    pin_defs = "\n".join(
+        f"  #define {pa.component_pin.upper().replace('-', '_')}_PIN {pa.gpio_pin}"
         for pa in spec.pin_assignments
     )
     comp_lines = "\n".join(
@@ -533,14 +626,15 @@ async def generate_firmware(spec: ProjectSpec) -> tuple[str, str]:
         behavior=spec.behavior,
         libraries=", ".join(spec.libraries),
         pin_assignments=pin_lines,
+        pin_definitions=pin_defs,
         components=comp_lines,
         threshold_info=threshold_info,
     )
 
+    raw = ""
     try:
         raw = await _ollama_generate(FIRMWARE_MODEL, prompt, MAX_TOKENS_FIRMWARE)
     except (httpx.ConnectError, httpx.TimeoutException, OSError):
-        # Ollama not reachable: use deterministic firmware generator
         fw = _deterministic_firmware(spec)
         return fw, fw
     except httpx.HTTPStatusError as e:
@@ -558,20 +652,10 @@ async def generate_firmware(spec: ProjectSpec) -> tuple[str, str]:
 
     code = _extract_code(raw)
 
-    # Validate that code has setup and loop, and doesn't hallucinate missing components
-    comp_ids = {c.catalog_id for c in spec.components}
-    needs_fallback = False
-
-    if "void setup()" not in code or "void loop()" not in code:
-        needs_fallback = True
-    elif "hc_sr04" in comp_ids and ("pulseIn" not in code and "TRIG_PIN" not in code and "5" not in code):
-        needs_fallback = True
-    elif "dht22" in comp_ids and ("dht" not in code.lower() and "temperature" not in code.lower()):
-        needs_fallback = True
-    elif "potentiometer_10k" in comp_ids and ("analogRead" not in code and "POT" not in code and "34" not in code):
-        needs_fallback = True
-
-    if needs_fallback:
+    # Validate model code against hardware specification
+    valid, errors = validate_firmware_against_spec(code, spec)
+    if not valid:
+        # Model hallucinated unrequested components or missed required logic
         code = _deterministic_firmware(spec)
 
     return code, raw
