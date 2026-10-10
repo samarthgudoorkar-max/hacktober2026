@@ -6,6 +6,7 @@ Binds to 127.0.0.1 by default. Never sends data to cloud services.
 from __future__ import annotations
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
@@ -13,6 +14,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
+
+logger = logging.getLogger("circuitforge")
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -202,6 +205,7 @@ async def plan_project_endpoint(project_id: str):
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    logger.info(f"PLAN_START | project_id={project_id} | user_request='{project.user_request}'")
     project.status = ProjectStatus.PLANNING
     await update_project(project)
 
@@ -219,20 +223,28 @@ async def plan_project_endpoint(project_id: str):
         project.bom = generate_bom(project_id, spec)
 
         await update_project(project)
+        comp_summary = [c.catalog_id for c in spec.components]
+        pin_summary = [f"{pa.component_instance}.{pa.component_pin}->GPIO{pa.gpio_pin}" for pa in spec.pin_assignments]
+        logger.info(
+            f"PLAN_SUCCESS | project_id={project_id} | name='{spec.name}' | "
+            f"components={comp_summary} | pins={pin_summary} | threshold={spec.threshold_value} {spec.threshold_unit}"
+        )
         await log_operation(
             project_id, "plan", "success",
             duration_ms=int((time.time() - start) * 1000),
-            message=f"Planned with {len(spec.components)} components"
+            message=f"Planned with components {comp_summary} and pins {pin_summary}"
         )
         return project.model_dump()
 
     except ValueError as e:
+        logger.error(f"PLAN_ERROR | project_id={project_id} | error={e}")
         project.status = ProjectStatus.ERROR
         project.error_message = str(e)
         await update_project(project)
         await log_operation(project_id, "plan", "error", message=str(e))
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
+        logger.error(f"PLAN_FATAL | project_id={project_id} | error={e}")
         project.status = ProjectStatus.ERROR
         project.error_message = f"Unexpected error during planning: {e}"
         await update_project(project)
@@ -250,6 +262,7 @@ async def generate_project(project_id: str):
     if project.spec is None:
         raise HTTPException(status_code=400, detail="Project must be planned first. Call /plan first.")
 
+    logger.info(f"GEN_START | project_id={project_id} | components={[c.catalog_id for c in project.spec.components]}")
     project.status = ProjectStatus.GENERATING
     await update_project(project)
     start = time.time()
@@ -267,20 +280,26 @@ async def generate_project(project_id: str):
         project.status = ProjectStatus.GENERATED
         project.error_message = None
         await update_project(project)
+        logger.info(
+            f"GEN_SUCCESS | project_id={project_id} | parts={len(diagram.get('parts', []))} | "
+            f"connections={len(diagram.get('connections', []))} | fw_chars={len(firmware)}"
+        )
         await log_operation(
             project_id, "generate", "success",
             duration_ms=int((time.time() - start) * 1000),
-            message=f"Diagram: {len(diagram.get('parts', []))} parts. Firmware: {len(firmware)} chars."
+            message=f"Diagram: {len(diagram.get('parts', []))} parts, {len(diagram.get('connections', []))} connections. Firmware: {len(firmware)} chars."
         )
         return project.model_dump()
 
     except ValueError as e:
+        logger.error(f"GEN_ERROR | project_id={project_id} | error={e}")
         project.status = ProjectStatus.ERROR
         project.error_message = str(e)
         await update_project(project)
         await log_operation(project_id, "generate", "error", message=str(e))
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
+        logger.error(f"GEN_FATAL | project_id={project_id} | error={e}")
         project.status = ProjectStatus.ERROR
         project.error_message = f"Generation error: {e}"
         await update_project(project)

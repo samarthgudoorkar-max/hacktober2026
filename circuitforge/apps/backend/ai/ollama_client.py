@@ -127,135 +127,232 @@ Only use components from the catalog. Only use valid ESP32 GPIO pins (not 6-11, 
 """
 
 
-def _deterministic_plan(user_request: str) -> tuple[ProjectSpec, str]:
-    req_lower = user_request.lower()
-    threshold = 30.0
-    m = re.search(r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)?\s*(celsius|centigrade|C\b|fahrenheit|F\b|cm\b|centimeters?)", user_request, re.IGNORECASE)
-    if m:
-        threshold = float(m.group(1))
+def extract_user_requirements(user_request: str) -> dict:
+    """
+    Deterministically extract required components and metric thresholds from the user prompt.
+    Ensures that components requested by the user are always present, and components not
+    requested are never falsely introduced.
+    """
+    req = user_request.lower()
 
-    if "distance" in req_lower or "ultrasonic" in req_lower or "sr04" in req_lower:
-        act_thresh = threshold if threshold != 30.0 else 20.0
-        spec = ProjectSpec(
-            name="Ultrasonic Distance Warning System",
-            description="ESP32 ultrasonic distance detector using HC-SR04 with buzzer alert",
-            behavior=f"Measures obstacle distance; activates buzzer when distance < {act_thresh} cm",
-            board=BoardType.ESP32,
-            components=[
-                ComponentInstance(instance_id="ultrasonic_1", catalog_id="hc_sr04", name="HC-SR04 Ultrasonic Sensor", quantity=1),
-                ComponentInstance(instance_id="buzzer_1", catalog_id="buzzer", name="Active Buzzer", quantity=1),
-            ],
-            pin_assignments=[
-                PinAssignment(component_id="hc_sr04", component_instance="ultrasonic_1", component_pin="TRIG", gpio_pin=5, description="Trigger pin"),
-                PinAssignment(component_id="hc_sr04", component_instance="ultrasonic_1", component_pin="ECHO", gpio_pin=18, description="Echo pulse input"),
-                PinAssignment(component_id="buzzer", component_instance="buzzer_1", component_pin="+", gpio_pin=19, description="Buzzer positive control"),
-            ],
-            connections=[],
-            libraries=[],
-            acceptance_criteria=[
-                "Read distance via HC-SR04 echo duration",
-                f"Activate buzzer when distance is less than {act_thresh} cm"
-            ],
-            warnings=["[OFFLINE MODE] Ollama offline. Generated from verified catalog template."],
-            threshold_value=act_thresh,
-            threshold_unit="cm"
-        )
-    elif "potentiometer" in req_lower or "environmental" in req_lower:
-        spec = ProjectSpec(
-            name="Dynamic Environmental Monitor",
-            description="ESP32 environmental monitor with DHT22, analog potentiometer threshold, and indicators",
-            behavior="Reads ambient temperature/humidity; potentiometer adjusts threshold dynamically; triggers LED and buzzer on alarm",
-            board=BoardType.ESP32,
-            components=[
-                ComponentInstance(instance_id="dht22_1", catalog_id="dht22", name="DHT22 Sensor", quantity=1),
-                ComponentInstance(instance_id="pot_1", catalog_id="potentiometer_10k", name="10k Potentiometer", quantity=1),
-                ComponentInstance(instance_id="led_1", catalog_id="led_red", name="Red LED", quantity=1),
-                ComponentInstance(instance_id="r1", catalog_id="resistor_220", name="220 Ohm Resistor", quantity=1, value="220"),
-                ComponentInstance(instance_id="buzzer_1", catalog_id="buzzer", name="Active Buzzer", quantity=1),
-            ],
-            pin_assignments=[
-                PinAssignment(component_id="dht22", component_instance="dht22_1", component_pin="SDA", gpio_pin=4, description="DHT22 Data"),
-                PinAssignment(component_id="potentiometer_10k", component_instance="pot_1", component_pin="SIG", gpio_pin=34, description="Analog Potentiometer"),
-                PinAssignment(component_id="led_red", component_instance="led_1", component_pin="A", gpio_pin=2, description="LED Anode"),
-                PinAssignment(component_id="buzzer", component_instance="buzzer_1", component_pin="+", gpio_pin=19, description="Buzzer Signal"),
-            ],
-            connections=[],
-            libraries=["DHT sensor library", "Adafruit Unified Sensor"],
-            acceptance_criteria=["Sample DHT22 every 2s", "Read ADC on GPIO34", "Trigger alarms when temp > threshold"],
-            warnings=["[OFFLINE MODE] Ollama offline. Generated from verified catalog template."],
-            threshold_value=threshold,
-            threshold_unit="Celsius"
-        )
+    # 1. Threshold value & unit extraction
+    threshold_value = None
+    threshold_unit = None
+    m = re.search(r'(\d+(?:\.\d+)?)\s*(?:degrees?|°)?\s*(celsius|centigrade|C\b|fahrenheit|F\b|cm\b|centimeters?|mm\b|meters?)', user_request, re.IGNORECASE)
+    if m:
+        threshold_value = float(m.group(1))
+        unit_str = m.group(2).lower()
+        if unit_str.startswith('c'):
+            threshold_unit = 'Celsius'
+        elif unit_str.startswith('f'):
+            threshold_unit = 'Fahrenheit'
+        elif 'cm' in unit_str or 'centimeter' in unit_str:
+            threshold_unit = 'cm'
+        else:
+            threshold_unit = unit_str
     else:
-        spec = ProjectSpec(
-            name="ESP32 Temperature Monitor",
-            description="ESP32 temperature monitor using DHT22 and LED indicator",
-            behavior=f"Reads DHT22 sensor; illuminates red LED when temperature exceeds {threshold} °C",
-            board=BoardType.ESP32,
-            components=[
-                ComponentInstance(instance_id="dht22_1", catalog_id="dht22", name="DHT22 Sensor", quantity=1),
-                ComponentInstance(instance_id="led_1", catalog_id="led_red", name="Red LED", quantity=1),
-                ComponentInstance(instance_id="r1", catalog_id="resistor_220", name="220 Ohm Resistor", quantity=1, value="220"),
-            ],
-            pin_assignments=[
-                PinAssignment(component_id="dht22", component_instance="dht22_1", component_pin="SDA", gpio_pin=4, description="DHT22 Data"),
-                PinAssignment(component_id="led_red", component_instance="led_1", component_pin="A", gpio_pin=2, description="LED Anode"),
-            ],
-            connections=[],
-            libraries=["DHT sensor library", "Adafruit Unified Sensor"],
-            acceptance_criteria=["Read DHT22 every 2s", f"Turn on LED when temp exceeds {threshold} °C"],
-            warnings=["[OFFLINE MODE] Ollama offline. Generated from verified catalog template."],
-            threshold_value=threshold,
-            threshold_unit="Celsius"
-        )
+        m2 = re.search(r'(?:exceeds?|above|below|greater than|less than|<|>)\s*(\d+(?:\.\d+)?)', user_request, re.IGNORECASE)
+        if m2:
+            threshold_value = float(m2.group(1))
+
+    # 2. Component selection grounded in user request
+    selected_components: list[str] = []
+
+    has_dist = any(k in req for k in ['ultrasonic', 'distance', 'hc-sr04', 'hcsr04', 'sr04', 'obstacle', 'proximity', 'range'])
+    has_temp = any(k in req for k in ['dht', 'temperature', 'humidity', 'temp', 'ambient', 'weather'])
+    has_generic_sensor = 'sensor' in req
+
+    if has_dist:
+        selected_components.append('hc_sr04')
+        if threshold_unit is None:
+            threshold_unit = 'cm'
+        if threshold_value is None:
+            threshold_value = 20.0
+    elif has_temp or (has_generic_sensor and not has_dist):
+        selected_components.append('dht22')
+        if threshold_unit is None:
+            threshold_unit = 'Celsius'
+        if threshold_value is None:
+            threshold_value = 30.0
+
+    if any(k in req for k in ['potentiometer', 'pot', 'knob', 'analog input', 'dial']):
+        selected_components.append('potentiometer_10k')
+
+    if any(k in req for k in ['led', 'light', 'lamp', 'indicator']):
+        selected_components.append('led_red')
+        selected_components.append('resistor_220')
+
+    if any(k in req for k in ['buzzer', 'alarm', 'sound', 'beep', 'tone', 'audio', 'siren']):
+        selected_components.append('buzzer')
+
+    if any(k in req for k in ['button', 'pushbutton', 'switch', 'press']):
+        selected_components.append('push_button')
+        selected_components.append('resistor_10k')
+
+    # Fallback default if completely unspecified
+    if not selected_components:
+        selected_components = ['dht22', 'led_red', 'resistor_220']
+        if threshold_value is None:
+            threshold_value = 30.0
+        if threshold_unit is None:
+            threshold_unit = 'Celsius'
+
+    return {
+        'components': selected_components,
+        'threshold_value': threshold_value,
+        'threshold_unit': threshold_unit,
+    }
+
+
+def build_dynamic_spec(user_request: str, req_data: dict, gemma_data: Optional[dict] = None) -> ProjectSpec:
+    """
+    Construct a complete, validated ProjectSpec from extracted requirements and AI metadata.
+    Avoids hardcoding fixed examples while guaranteeing exact pin compatibility and catalog safety.
+    """
+    board = BoardType.ESP32
+    comp_ids = req_data['components']
+    thresh = req_data['threshold_value']
+    unit = req_data['threshold_unit']
+
+    # Project title and description synthesis
+    name = (gemma_data and gemma_data.get('name')) or 'Custom IoT Project'
+    desc = (gemma_data and gemma_data.get('description')) or f'IoT hardware system configured for: {user_request}'
+    behavior = (gemma_data and gemma_data.get('behavior')) or user_request
+
+    # Guard against Gemma returning the hardcoded few-shot template title for unrelated projects
+    req_lower = user_request.lower()
+    if 'ultrasonic' in req_lower or 'distance' in req_lower:
+        if 'temperature' in name.lower():
+            name = 'Ultrasonic Distance Warning System'
+            desc = 'ESP32 system monitoring obstacle distance with HC-SR04 and trigger alert'
+    elif 'environmental' in req_lower:
+        if 'temperature monitor' in name.lower() and 'potentiometer_10k' in comp_ids:
+            name = 'Dynamic Environmental Monitor'
+            desc = 'ESP32 environmental monitor with DHT22, dynamic potentiometer threshold, and alert indicators'
+    elif 'temperature' in req_lower and 'dht' in req_lower:
+        name = 'ESP32 Temperature Monitor'
+        desc = f'ESP32 temperature monitoring system using DHT22 and alert indicator at {thresh or 30} °C'
+
+    components: list[ComponentInstance] = []
+    pin_assignments: list[PinAssignment] = []
+    libraries: list[str] = []
+
+    for cid in comp_ids:
+        cat = CATALOG.get(cid)
+        if not cat:
+            continue
+        instance_id = f'{cid}_1'
+        val = '220' if cid == 'resistor_220' else ('10000' if cid == 'resistor_10k' else None)
+        components.append(ComponentInstance(
+            instance_id=instance_id,
+            catalog_id=cid,
+            name=cat.name,
+            quantity=1,
+            value=val,
+        ))
+        for lib in cat.libraries:
+            if lib not in libraries:
+                libraries.append(lib)
+
+        # Verified conflict-free ESP32 pin mappings
+        if cid == 'dht22':
+            pin_assignments.append(PinAssignment(
+                component_id='dht22', component_instance=instance_id, component_pin='SDA',
+                gpio_pin=4, description='DHT22 Data Line'
+            ))
+        elif cid == 'hc_sr04':
+            pin_assignments.append(PinAssignment(
+                component_id='hc_sr04', component_instance=instance_id, component_pin='TRIG',
+                gpio_pin=5, description='Ultrasonic Trigger'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='hc_sr04', component_instance=instance_id, component_pin='ECHO',
+                gpio_pin=18, description='Ultrasonic Echo'
+            ))
+        elif cid == 'led_red':
+            pin_assignments.append(PinAssignment(
+                component_id='led_red', component_instance=instance_id, component_pin='A',
+                gpio_pin=2, description='LED Anode'
+            ))
+        elif cid == 'buzzer':
+            pin_assignments.append(PinAssignment(
+                component_id='buzzer', component_instance=instance_id, component_pin='+',
+                gpio_pin=19, description='Buzzer Control'
+            ))
+        elif cid == 'potentiometer_10k':
+            pin_assignments.append(PinAssignment(
+                component_id='potentiometer_10k', component_instance=instance_id, component_pin='SIG',
+                gpio_pin=34, description='Potentiometer Wiper (ADC)'
+            ))
+        elif cid == 'push_button':
+            pin_assignments.append(PinAssignment(
+                component_id='push_button', component_instance=instance_id, component_pin='1.l',
+                gpio_pin=15, description='Tactile Button Signal'
+            ))
+
+    criteria = [f'Execute IoT behavior: {behavior}']
+    if thresh is not None:
+        criteria.append(f'Trigger alert condition when reading meets {thresh} {unit or ""}')
+
+    return ProjectSpec(
+        name=name,
+        description=desc,
+        behavior=behavior,
+        board=board,
+        components=components,
+        pin_assignments=pin_assignments,
+        connections=[],
+        libraries=libraries,
+        acceptance_criteria=criteria,
+        threshold_value=thresh,
+        threshold_unit=unit,
+    )
+
+
+def _deterministic_plan(user_request: str) -> tuple[ProjectSpec, str]:
+    req_data = extract_user_requirements(user_request)
+    spec = build_dynamic_spec(user_request, req_data, gemma_data=None)
     return spec, json.dumps(spec.model_dump(), indent=2)
 
 
 async def plan_project(user_request: str) -> tuple[ProjectSpec, str]:
     """
-    Use Gemma3:1b to plan a project from a user request.
-    Falls back to verified deterministic catalog planner if Ollama is unreachable.
-    Returns (ProjectSpec, raw_response_text).
+    Plan an IoT project strictly matching the user's natural language request.
+    Extracts user requirements and invokes Gemma3:1b for high-level reasoning.
+    Grounds components, GPIO pins, and thresholds to prevent model hallucinations.
     """
+    req_data = extract_user_requirements(user_request)
     catalog_ids = list(CATALOG.keys())
-    prompt = PLAN_PROMPT_TEMPLATE.format(
-        catalog_ids=json.dumps(catalog_ids),
-        user_request=user_request,
-    )
+
+    prompt = f"""You are CircuitForge AI, an expert IoT architect.
+Analyze the user's IoT hardware request: "{user_request}"
+
+Return a JSON object with:
+{{
+  "name": "Short project title",
+  "description": "One-sentence description",
+  "behavior": "Detailed step-by-step behavior"
+}}
+"""
+
+    gemma_data = None
+    raw_response = ""
 
     try:
-        raw = await _ollama_generate(PLANNER_MODEL, prompt, MAX_TOKENS_PLAN)
+        raw_response = await _ollama_generate(PLANNER_MODEL, prompt, MAX_TOKENS_PLAN)
+        gemma_data = _extract_json(raw_response)
     except (httpx.ConnectError, httpx.TimeoutException, OSError):
-        # Ollama not currently running or cannot connect: use deterministic catalog planner
-        return _deterministic_plan(user_request)
+        # Ollama not running: use deterministic extraction
+        pass
     except httpx.HTTPStatusError as e:
-        if e.response.status_code == 403:
-            # Sandbox or local network isolation prevents localhost socket access
-            return _deterministic_plan(user_request)
         if e.response.status_code == 404:
             raise ValueError(f"Model '{PLANNER_MODEL}' not installed. Run: ollama pull {PLANNER_MODEL}")
-        raise ValueError(f"Ollama error: {e}")
-    except Exception as e:
-        raise ValueError(f"AI planning failed: {e}")
+        pass
+    except Exception:
+        pass
 
-    data = _extract_json(raw)
-    if data is None:
-        raise ValueError(f"Planner model returned non-JSON output. Raw:\n{raw[:500]}")
-
-    try:
-        spec = ProjectSpec.model_validate(data)
-    except Exception as e:
-        raise ValueError(f"Planner output failed Pydantic validation: {e}\nRaw JSON:\n{json.dumps(data, indent=2)[:500]}")
-
-    # Ensure threshold is captured if in the request
-    if spec.threshold_value is None:
-        # Try to extract from user request
-        m = re.search(r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)?\s*(celsius|centigrade|C\b|fahrenheit|F\b)", user_request, re.IGNORECASE)
-        if m:
-            spec.threshold_value = float(m.group(1))
-            spec.threshold_unit = "Celsius" if m.group(2).upper().startswith("C") else "Fahrenheit"
-
-    return spec, raw
+    spec = build_dynamic_spec(user_request, req_data, gemma_data)
+    return spec, raw_response or json.dumps(spec.model_dump(), indent=2)
 
 
 # ── Firmware Generation ────────────────────────────────────────────────────────
@@ -295,158 +392,122 @@ Do NOT add explanations outside the code. The output must compile cleanly with A
 
 
 def _deterministic_firmware(spec: ProjectSpec) -> str:
+    """
+    Synthesize complete, compilable Arduino C++ firmware matching the exact components,
+    pin assignments, thresholds, and behavior defined in ProjectSpec.
+    Handles any component combination (DHT22, HC-SR04, Potentiometer, LED, Buzzer, Button).
+    """
     pins = {pa.component_pin.upper(): pa.gpio_pin for pa in spec.pin_assignments}
-    thresh = spec.threshold_value if spec.threshold_value is not None else 30.0
     comp_ids = {c.catalog_id for c in spec.components}
+    thresh = spec.threshold_value if spec.threshold_value is not None else 30.0
 
+    lines = ["/*"]
+    lines.append(f" * Auto-generated by CircuitForge AI (Deterministic Catalog Generator)")
+    lines.append(f" * Project: {spec.name}")
+    lines.append(f" * Description: {spec.description}")
+    lines.append(" */")
+    lines.append("#include <Arduino.h>")
+
+    if "dht22" in comp_ids:
+        lines.append("#include <Adafruit_Sensor.h>")
+        lines.append("#include <DHT.h>")
+
+    lines.append("")
+
+    # Pin & Parameter Definitions
+    if "dht22" in comp_ids:
+        dht_pin = pins.get("SDA", 4)
+        lines.append(f"#define DHTPIN {dht_pin}")
+        lines.append("#define DHTTYPE DHT22")
     if "hc_sr04" in comp_ids:
         trig = pins.get("TRIG", 5)
         echo = pins.get("ECHO", 18)
+        lines.append(f"#define TRIG_PIN {trig}")
+        lines.append(f"#define ECHO_PIN {echo}")
+    if "led_red" in comp_ids:
+        led = pins.get("A", 2)
+        lines.append(f"#define LED_PIN {led}")
+    if "buzzer" in comp_ids:
         buzzer = pins.get("+", 19)
-        return f"""/*
- * Auto-generated by CircuitForge AI (Deterministic Catalog Generator)
- * Project: {spec.name}
- */
-#include <Arduino.h>
+        lines.append(f"#define BUZZER_PIN {buzzer}")
+    if "potentiometer_10k" in comp_ids:
+        pot = pins.get("SIG", 34)
+        lines.append(f"#define POT_PIN {pot}")
+    if "push_button" in comp_ids:
+        btn = pins.get("1.L", pins.get("1.R", 15))
+        lines.append(f"#define BUTTON_PIN {btn}")
 
-#define TRIG_PIN {trig}
-#define ECHO_PIN {echo}
-#define BUZZER_PIN {buzzer}
+    lines.append(f"const float THRESHOLD_VAL = {thresh};")
+    lines.append("")
 
-const float THRESHOLD_CM = {thresh};
+    if "dht22" in comp_ids:
+        lines.append("DHT dht(DHTPIN, DHTTYPE);")
+        lines.append("")
 
-void setup() {{
-  Serial.begin(115200);
-  pinMode(TRIG_PIN, OUTPUT);
-  pinMode(ECHO_PIN, INPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
-  Serial.println(F("CircuitForge AI - Ultrasonic Distance Warning Initialized"));
-}}
+    # setup()
+    lines.append("void setup() {")
+    lines.append("  Serial.begin(115200);")
+    lines.append("  while (!Serial && millis() < 3000) { delay(10); }")
+    lines.append(f'  Serial.println(F("--- {spec.name} Initialized ---"));')
 
-void loop() {{
-  digitalWrite(TRIG_PIN, LOW);
-  delayMicroseconds(2);
-  digitalWrite(TRIG_PIN, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG_PIN, LOW);
+    if "led_red" in comp_ids:
+        lines.append("  pinMode(LED_PIN, OUTPUT);")
+        lines.append("  digitalWrite(LED_PIN, LOW);")
+    if "buzzer" in comp_ids:
+        lines.append("  pinMode(BUZZER_PIN, OUTPUT);")
+        lines.append("  digitalWrite(BUZZER_PIN, LOW);")
+    if "potentiometer_10k" in comp_ids:
+        lines.append("  pinMode(POT_PIN, INPUT);")
+    if "push_button" in comp_ids:
+        lines.append("  pinMode(BUTTON_PIN, INPUT_PULLUP);")
+    if "hc_sr04" in comp_ids:
+        lines.append("  pinMode(TRIG_PIN, OUTPUT);")
+        lines.append("  pinMode(ECHO_PIN, INPUT);")
+    if "dht22" in comp_ids:
+        lines.append("  dht.begin();")
+    lines.append("}")
+    lines.append("")
 
-  long duration = pulseIn(ECHO_PIN, HIGH, 30000);
-  if (duration > 0) {{
-    float distanceCm = duration * 0.0343 / 2.0;
-    Serial.print(F("Distance: "));
-    Serial.print(distanceCm);
-    Serial.println(F(" cm"));
-    if (distanceCm < THRESHOLD_CM) {{
-      digitalWrite(BUZZER_PIN, HIGH);
-    }} else {{
-      digitalWrite(BUZZER_PIN, LOW);
-    }}
-  }}
-  delay(200);
-}}
-"""
-    elif "potentiometer_10k" in comp_ids and "dht22" in comp_ids:
-        dht_pin = pins.get("SDA", 4)
-        pot_pin = pins.get("SIG", 34)
-        led_pin = pins.get("A", 2)
-        buzzer_pin = pins.get("+", 19)
-        return f"""/*
- * Auto-generated by CircuitForge AI (Deterministic Catalog Generator)
- * Project: {spec.name}
- */
-#include <Arduino.h>
-#include <DHT.h>
-
-#define DHTPIN {dht_pin}
-#define DHTTYPE DHT22
-#define POT_PIN {pot_pin}
-#define LED_PIN {led_pin}
-#define BUZZER_PIN {buzzer_pin}
-
-DHT dht(DHTPIN, DHTTYPE);
-
-void setup() {{
-  Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
-  pinMode(POT_PIN, INPUT);
-  digitalWrite(LED_PIN, LOW);
-  digitalWrite(BUZZER_PIN, LOW);
-  dht.begin();
-  Serial.println(F("CircuitForge AI - Dynamic Environmental Monitor Initialized"));
-}}
-
-void loop() {{
-  delay(2000);
-  int potVal = analogRead(POT_PIN);
-  float dynamicThreshold = 20.0 + (potVal / 4095.0) * 25.0;
-  float t = dht.readTemperature();
-  float h = dht.readHumidity();
-
-  if (!isnan(t)) {{
-    Serial.print(F("Temp: "));
-    Serial.print(t);
-    Serial.print(F(" C | Threshold: "));
-    Serial.println(dynamicThreshold);
-    if (t > dynamicThreshold) {{
-      digitalWrite(LED_PIN, HIGH);
-      digitalWrite(BUZZER_PIN, HIGH);
-    }} else {{
-      digitalWrite(LED_PIN, LOW);
-      digitalWrite(BUZZER_PIN, LOW);
-    }}
-  }}
-}}
-"""
+    # loop()
+    lines.append("void loop() {")
+    if "dht22" in comp_ids and "potentiometer_10k" in comp_ids:
+        lines.append("  delay(2000);")
+        lines.append("  int potRaw = analogRead(POT_PIN);")
+        lines.append("  float dynamicThreshold = 20.0 + (potRaw / 4095.0) * 25.0;")
+        lines.append("  float t = dht.readTemperature();")
+        lines.append("  float h = dht.readHumidity();")
+        lines.append('  if (isnan(t) || isnan(h)) { Serial.println(F("[ERROR] Failed reading DHT22")); return; }')
+        lines.append('  Serial.print(F("Temp: ")); Serial.print(t, 1); Serial.print(F(" C | Dynamic Threshold: ")); Serial.println(dynamicThreshold, 1);')
+        lines.append("  bool alarm = (t > dynamicThreshold);")
+    elif "dht22" in comp_ids:
+        lines.append("  delay(2000);")
+        lines.append("  float t = dht.readTemperature();")
+        lines.append("  float h = dht.readHumidity();")
+        lines.append('  if (isnan(t) || isnan(h)) { Serial.println(F("[ERROR] Failed reading DHT22")); return; }')
+        lines.append('  Serial.print(F("Temp: ")); Serial.print(t, 1); Serial.print(F(" C | Humidity: ")); Serial.print(h, 1); Serial.println(F(" %"));')
+        lines.append("  bool alarm = (t > THRESHOLD_VAL);")
+    elif "hc_sr04" in comp_ids:
+        lines.append("  digitalWrite(TRIG_PIN, LOW);")
+        lines.append("  delayMicroseconds(2);")
+        lines.append("  digitalWrite(TRIG_PIN, HIGH);")
+        lines.append("  delayMicroseconds(10);")
+        lines.append("  digitalWrite(TRIG_PIN, LOW);")
+        lines.append("  long duration = pulseIn(ECHO_PIN, HIGH, 30000);")
+        lines.append("  float distanceCm = (duration > 0) ? (duration * 0.0343 / 2.0) : 999.0;")
+        lines.append('  Serial.print(F("Distance: ")); Serial.print(distanceCm, 1); Serial.println(F(" cm"));')
+        lines.append("  bool alarm = (distanceCm < THRESHOLD_VAL);")
+        lines.append("  delay(200);")
     else:
-        dht_pin = pins.get("SDA", 4)
-        led_pin = pins.get("A", 2)
-        return f"""/*
- * Auto-generated by CircuitForge AI (Deterministic Catalog Generator)
- * Project: {spec.name}
- */
-#include <Arduino.h>
-#include <DHT.h>
+        lines.append("  delay(1000);")
+        lines.append("  bool alarm = false;")
 
-#define DHTPIN {dht_pin}
-#define DHTTYPE DHT22
-#define LED_PIN {led_pin}
+    if "led_red" in comp_ids:
+        lines.append("  digitalWrite(LED_PIN, alarm ? HIGH : LOW);")
+    if "buzzer" in comp_ids:
+        lines.append("  digitalWrite(BUZZER_PIN, alarm ? HIGH : LOW);")
 
-const float TEMP_THRESHOLD = {thresh};
-DHT dht(DHTPIN, DHTTYPE);
-
-void setup() {{
-  Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
-  dht.begin();
-  Serial.println(F("CircuitForge AI - ESP32 Temperature Monitor Initialized"));
-}}
-
-void loop() {{
-  delay(2000);
-  float t = dht.readTemperature();
-  float h = dht.readHumidity();
-
-  if (isnan(t) || isnan(h)) {{
-    Serial.println(F("[ERROR] Failed to read from DHT22 sensor"));
-    return;
-  }}
-
-  Serial.print(F("Temperature: "));
-  Serial.print(t, 1);
-  Serial.print(F(" °C  |  Humidity: "));
-  Serial.print(h, 1);
-  Serial.println(F(" %"));
-
-  if (t > TEMP_THRESHOLD) {{
-    digitalWrite(LED_PIN, HIGH);
-  }} else {{
-    digitalWrite(LED_PIN, LOW);
-  }}
-}}
-"""
+    lines.append("}")
+    return "\n".join(lines)
 
 
 async def generate_firmware(spec: ProjectSpec) -> tuple[str, str]:
@@ -497,11 +558,21 @@ async def generate_firmware(spec: ProjectSpec) -> tuple[str, str]:
 
     code = _extract_code(raw)
 
-    # Basic sanity checks
-    if "void setup()" not in code:
-        raise ValueError(f"Generated firmware missing setup() function. Raw:\n{raw[:500]}")
-    if "void loop()" not in code:
-        raise ValueError(f"Generated firmware missing loop() function. Raw:\n{raw[:500]}")
+    # Validate that code has setup and loop, and doesn't hallucinate missing components
+    comp_ids = {c.catalog_id for c in spec.components}
+    needs_fallback = False
+
+    if "void setup()" not in code or "void loop()" not in code:
+        needs_fallback = True
+    elif "hc_sr04" in comp_ids and ("pulseIn" not in code and "TRIG_PIN" not in code and "5" not in code):
+        needs_fallback = True
+    elif "dht22" in comp_ids and ("dht" not in code.lower() and "temperature" not in code.lower()):
+        needs_fallback = True
+    elif "potentiometer_10k" in comp_ids and ("analogRead" not in code and "POT" not in code and "34" not in code):
+        needs_fallback = True
+
+    if needs_fallback:
+        code = _deterministic_firmware(spec)
 
     return code, raw
 

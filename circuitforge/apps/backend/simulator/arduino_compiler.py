@@ -70,7 +70,7 @@ def check_esp32_core() -> dict:
         return {"installed": False, "error": str(e)}
 
 
-async def compile_firmware(sketch_dir: Path, project_name: str) -> dict:
+async def compile_firmware(sketch_dir: Path | str, project_name: str) -> dict:
     """
     Compile an Arduino sketch using Arduino CLI.
     sketch_dir: directory containing sketch.ino
@@ -78,6 +78,7 @@ async def compile_firmware(sketch_dir: Path, project_name: str) -> dict:
 
     Returns dict with keys: success, exit_code, stdout, stderr, binary_path
     """
+    sketch_dir = Path(sketch_dir)
     path = _arduino_cli_path()
     if not path:
         return {
