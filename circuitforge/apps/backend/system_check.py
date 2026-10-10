@@ -133,7 +133,7 @@ def _find_wokwi_cli() -> Optional[str]:
         "/usr/local/bin/wokwi-cli",
         "/opt/homebrew/bin/wokwi-cli",
     ]:
-        if os.path.exists(candidate) and os.access(candidate, os.X_OK):
+        if os.path.exists(candidate):
             return candidate
     return None
 

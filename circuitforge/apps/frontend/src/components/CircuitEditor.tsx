@@ -586,7 +586,7 @@ const COMPONENT_METAS: Record<string, ComponentMeta> = {
     title: 'SG90 Micro Servo Motor',
     pins: [
       { name: 'GND', relX: 30, relY: 84, label: 'GND', type: 'ground' },
-      { name: 'VCC', relX: 55, relY: 84, label: 'VCC', type: 'power' },
+      { name: 'V+', relX: 55, relY: 84, label: 'V+', type: 'power' },
       { name: 'PWM', relX: 80, relY: 84, label: 'PWM', type: 'digital' },
     ],
     render: (part, isSelected) => (
@@ -1048,9 +1048,14 @@ export function CircuitEditor({
       let pin = meta.pins.find((p) => p.name.toUpperCase() === cleanTarget)
 
       if (!pin) {
-        // Try common aliases: e.g. "GND.1" -> "GND", "+" -> "1", "-" -> "2"
+        // Try common aliases: e.g. "GND.1" -> "GND", "VCC" <-> "V+", "+" -> "1", "-" -> "2"
         const baseName = cleanTarget.split('.')[0]
         pin = meta.pins.find((p) => p.name.toUpperCase() === baseName)
+        if (!pin && (cleanTarget === 'VCC' || cleanTarget === 'VIN' || cleanTarget === '5V')) {
+          pin = meta.pins.find((p) => p.name.toUpperCase() === 'V+')
+        } else if (!pin && cleanTarget === 'V+') {
+          pin = meta.pins.find((p) => p.name.toUpperCase() === 'VCC')
+        }
       }
       if (!pin) {
         // Fallback to center edge

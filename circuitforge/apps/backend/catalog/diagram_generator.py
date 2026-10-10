@@ -146,6 +146,13 @@ def generate_diagram(spec: ProjectSpec) -> dict:
                 pin = "1.r"
             elif pin.upper() in ("2.R", "LED-"):
                 pin = "2.r"
+        elif part_type == "wokwi-servo":
+            if pin.upper() in ("VCC", "VIN", "5V", "V", "POWER", "V+"):
+                pin = "V+"
+            elif pin.upper() in ("GND", "GROUND", "-"):
+                pin = "GND"
+            elif pin.upper() in ("PWM", "SIG", "SIGNAL", "IN"):
+                pin = "PWM"
         return f"{comp_id}:{pin}"
 
     # ── Connections ───────────────────────────────────────────────────────────
@@ -218,7 +225,7 @@ def _generate_connections_from_pin_assignments(spec: ProjectSpec) -> list[list]:
         if cat is None:
             continue
         for pin in cat.pins:
-            if pin.pin_type == "power" and pin.name.upper() in ("VCC", "3V3", "VIN", "LED"):
+            if pin.pin_type == "power" and (pin.name.upper() in ("VCC", "3V3", "VIN", "LED") or pin.name in ("V+", "VCC")):
                 connections.append([
                     "board:3V3", f"{inst.instance_id}:{pin.name}", "red", []
                 ])

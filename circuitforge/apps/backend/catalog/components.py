@@ -363,8 +363,8 @@ SERVO = CatalogComponent(
     supported_boards=["esp32", "arduino_uno", "arduino_nano"],
     pins=[
         ComponentPin(name="PWM", description="PWM Control Signal", pin_type="digital", required=True),
-        ComponentPin(name="VCC", description="5V Power (VIN)", pin_type="power", required=True),
-        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+        ComponentPin(name="V+",  description="5V Power (VIN / V+)", pin_type="power",   required=True),
+        ComponentPin(name="GND", description="Ground",              pin_type="ground",  required=True),
     ],
     libraries=["ESP32Servo"],
     unit_price_inr=120.0,

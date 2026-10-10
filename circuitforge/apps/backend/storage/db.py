@@ -152,6 +152,9 @@ def _clean_diagram_json(diag_data: Optional[dict]) -> Optional[dict]:
         t_ref = re.sub(r':1\.L\b', ':1.l', t_ref)
         t_ref = re.sub(r':2\.L\b', ':2.l', t_ref)
         t_ref = re.sub(r':LED\+\b', ':1.r', t_ref)
+        # Fix servo pins
+        f_ref = re.sub(r'(servo[^:]*):VCC\b', r'\1:V+', f_ref)
+        t_ref = re.sub(r'(servo[^:]*):VCC\b', r'\1:V+', t_ref)
         color = conn[2] if len(conn) > 2 else "green"
         clean_conns.append([f_ref, t_ref, color, []])
     diag_data["connections"] = clean_conns
