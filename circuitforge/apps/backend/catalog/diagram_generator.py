@@ -47,6 +47,8 @@ COMPONENT_ATTRS: dict[str, callable] = {
     "buzzer": lambda inst: _buzzer_attrs(),
     "push_button": lambda inst: {},
     "potentiometer_10k": lambda inst: _potentiometer_attrs(),
+    "mq135": lambda inst: {},
+    "tft_ili9341": lambda inst: {},
 }
 
 # Layout positions for parts — space them horizontally
@@ -148,7 +150,7 @@ def _generate_connections_from_pin_assignments(spec: ProjectSpec) -> list[list]:
         if cat is None:
             continue
         for pin in cat.pins:
-            if pin.pin_type == "power" and pin.name.upper() in ("VCC", "3V3", "VIN"):
+            if pin.pin_type == "power" and pin.name.upper() in ("VCC", "3V3", "VIN", "LED"):
                 connections.append([
                     f"board:3V3", f"{inst.instance_id}:{pin.name}", "red", []
                 ])

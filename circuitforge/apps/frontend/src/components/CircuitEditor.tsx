@@ -416,6 +416,116 @@ const COMPONENT_METAS: Record<string, ComponentMeta> = {
       </g>
     ),
   },
+
+  'wokwi-gas-sensor': {
+    width: 90,
+    height: 90,
+    title: 'MQ-135 Gas & Air Quality Sensor',
+    pins: [
+      { name: 'VCC', relX: 18, relY: 84, label: 'VCC', type: 'power' },
+      { name: 'GND', relX: 36, relY: 84, label: 'GND', type: 'ground' },
+      { name: 'DOUT', relX: 54, relY: 84, label: 'DOUT', type: 'digital' },
+      { name: 'AOUT', relX: 72, relY: 84, label: 'AOUT', type: 'analog' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        {/* PCB Board */}
+        <rect
+          x={6} y={6} width={78} height={72} rx={6}
+          fill="#0369a1" stroke={isSelected ? '#22d3ee' : '#0284c7'}
+          strokeWidth={isSelected ? 3 : 1.5}
+        />
+        {/* Mounting holes */}
+        <circle cx={14} cy={14} r={3} fill="#075985" stroke="#38bdf8" strokeWidth={0.5} />
+        <circle cx={76} cy={14} r={3} fill="#075985" stroke="#38bdf8" strokeWidth={0.5} />
+
+        {/* Trimpot & components on PCB */}
+        <rect x={14} y={50} width={12} height={12} rx={2} fill="#1e293b" />
+        <circle cx={20} cy={56} r={3} fill="#0ea5e9" />
+        <circle cx={70} cy={52} r={2.5} fill="#22c55e" />
+        <circle cx={70} cy={60} r={2.5} fill="#ef4444" />
+
+        {/* Circular Gas Mesh Sensor Dome */}
+        <circle cx={45} cy={36} r={24} fill="#64748b" stroke="#94a3b8" strokeWidth={2} />
+        <circle cx={45} cy={36} r={20} fill="#475569" stroke="#cbd5e1" strokeWidth={1} strokeDasharray="2,2" />
+        <circle cx={45} cy={36} r={14} fill="#334155" />
+        <circle cx={45} cy={36} r={8} fill="#1e293b" />
+        <text x={45} y={39} fill="#f1f5f9" fontSize={8} fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+          MQ-135
+        </text>
+
+        {/* Bottom Header Pins */}
+        <line x1={18} y1={78} x2={18} y2={84} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        <line x1={36} y1={78} x2={36} y2={84} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        <line x1={54} y1={78} x2={54} y2={84} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        <line x1={72} y1={78} x2={72} y2={84} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        <text x={45} y={72} fill="#bae6fd" fontSize={6} fontFamily="monospace" textAnchor="middle">AIR QUALITY</text>
+      </g>
+    ),
+  },
+
+  'wokwi-ili9341': {
+    width: 140,
+    height: 195,
+    title: '2.8" SPI TFT LCD (ILI9341)',
+    pins: [
+      { name: 'VCC', relX: 14, relY: 188, label: 'VCC', type: 'power' },
+      { name: 'GND', relX: 28, relY: 188, label: 'GND', type: 'ground' },
+      { name: 'CS', relX: 42, relY: 188, label: 'CS', type: 'digital' },
+      { name: 'RESET', relX: 56, relY: 188, label: 'RST', type: 'digital' },
+      { name: 'RST', relX: 56, relY: 188, label: 'RST', type: 'digital' },
+      { name: 'DC', relX: 70, relY: 188, label: 'DC', type: 'digital' },
+      { name: 'MOSI', relX: 84, relY: 188, label: 'SDI', type: 'digital' },
+      { name: 'SCK', relX: 98, relY: 188, label: 'SCK', type: 'digital' },
+      { name: 'LED', relX: 112, relY: 188, label: 'LED', type: 'power' },
+      { name: 'MISO', relX: 126, relY: 188, label: 'SDO', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        {/* Module Red PCB */}
+        <rect
+          x={4} y={4} width={132} height={176} rx={6}
+          fill="#991b1b" stroke={isSelected ? '#22d3ee' : '#b91c1c'}
+          strokeWidth={isSelected ? 3 : 1.5}
+        />
+        {/* Mounting Holes */}
+        <circle cx={10} cy={10} r={3} fill="#450a0a" stroke="#f87171" strokeWidth={0.5} />
+        <circle cx={130} cy={10} r={3} fill="#450a0a" stroke="#f87171" strokeWidth={0.5} />
+
+        {/* Display Metal/Bezel Outer Frame */}
+        <rect x={12} y={16} width={116} height={148} rx={4} fill="#0f172a" stroke="#334155" strokeWidth={1.5} />
+
+        {/* LCD Active Screen Area */}
+        <rect x={16} y={20} width={108} height={140} rx={2} fill="#020617" />
+
+        {/* Screen Graphic Simulation */}
+        <rect x={18} y={22} width={104} height={20} fill="#1e293b" />
+        <text x={70} y={36} fill="#38bdf8" fontSize={9} fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+          ILI9341 320x240
+        </text>
+
+        <rect x={24} y={50} width={92} height={50} rx={3} fill="#090d16" stroke="#1e293b" strokeWidth={1} />
+        <text x={70} y={68} fill="#22c55e" fontSize={8} fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+          CircuitForge AI
+        </text>
+        <text x={70} y={85} fill="#f1f5f9" fontSize={11} fontWeight="bold" fontFamily="monospace" textAnchor="middle">
+          LIVE DISPLAY
+        </text>
+
+        {/* Screen Status Bar */}
+        <rect x={24} y={108} width={92} height={16} rx={2} fill="#1e3a5f" />
+        <text x={70} y={120} fill="#38bdf8" fontSize={7} fontFamily="monospace" textAnchor="middle">
+          SPI: CS15 DC2 RST4
+        </text>
+
+        {/* Bottom Pin Header Strip */}
+        <rect x={8} y={170} width={124} height={10} fill="#1e293b" />
+        {[14, 28, 42, 56, 70, 84, 98, 112, 126].map((px) => (
+          <line key={px} x1={px} y1={178} x2={px} y2={188} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
 }
 
 // Fallback generic component

@@ -248,6 +248,70 @@ POTENTIOMETER = CatalogComponent(
 )
 
 
+# ── MQ-135 Gas & Air Quality Sensor ───────────────────────────────────────────
+
+MQ135 = CatalogComponent(
+    id="mq135",
+    name="MQ-135 Air Quality & Gas Sensor",
+    category="sensor",
+    wokwi_id="wokwi-gas-sensor",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="VCC",  description="Power terminal 5V/3.3V", pin_type="power",   required=True),
+        ComponentPin(name="GND",  description="Ground terminal",       pin_type="ground",  required=True),
+        ComponentPin(name="AOUT", description="Analog output (PPM)",   pin_type="analog",  required=True),
+        ComponentPin(name="DOUT", description="Digital threshold out", pin_type="digital", required=False),
+    ],
+    wiring_rules=[
+        WiringRule(from_pin="VCC", to_component="esp32", to_pin="3V3", description="Connect to 3.3V power"),
+        WiringRule(from_pin="GND", to_component="esp32", to_pin="GND", description="Connect to ground"),
+        WiringRule(from_pin="AOUT", to_component="esp32", to_pin="GPIO34", description="Analog signal to ADC1"),
+    ],
+    libraries=[],
+    unit_price_inr=160.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Air quality sensor for detecting ammonia, nitrogen oxides, alcohol, benzene, smoke, and CO2",
+    electrical_constraints=["Requires preheating for accurate readings", "Connect AOUT to ADC1 pin (e.g. GPIO34)"],
+)
+
+# ── 2.8" SPI TFT Display (ILI9341) ─────────────────────────────────────────────
+
+TFT_ILI9341 = CatalogComponent(
+    id="tft_ili9341",
+    name="2.8\" SPI TFT LCD Display (ILI9341)",
+    category="display",
+    wokwi_id="wokwi-ili9341",
+    supported_boards=["esp32"],
+    pins=[
+        ComponentPin(name="VCC",   description="Power supply 3.3V",   pin_type="power",   required=True),
+        ComponentPin(name="GND",   description="Ground",              pin_type="ground",  required=True),
+        ComponentPin(name="CS",    description="Chip Select (SPI)",   pin_type="digital", required=True),
+        ComponentPin(name="RESET", description="Reset line",          pin_type="digital", required=True),
+        ComponentPin(name="DC",    description="Data/Command select", pin_type="digital", required=True),
+        ComponentPin(name="MOSI",  description="SPI Data input",      pin_type="digital", required=True),
+        ComponentPin(name="SCK",   description="SPI Clock",           pin_type="digital", required=True),
+        ComponentPin(name="LED",   description="Backlight 3.3V",      pin_type="power",   required=False),
+        ComponentPin(name="MISO",  description="SPI Data output",     pin_type="digital", required=False),
+    ],
+    wiring_rules=[
+        WiringRule(from_pin="VCC", to_component="esp32", to_pin="3V3", description="3.3V power"),
+        WiringRule(from_pin="GND", to_component="esp32", to_pin="GND", description="Ground"),
+        WiringRule(from_pin="CS", to_component="esp32", to_pin="GPIO15", description="SPI Chip Select"),
+        WiringRule(from_pin="DC", to_component="esp32", to_pin="GPIO2", description="SPI Data/Command"),
+        WiringRule(from_pin="RESET", to_component="esp32", to_pin="GPIO4", description="Display Reset"),
+        WiringRule(from_pin="MOSI", to_component="esp32", to_pin="GPIO23", description="SPI MOSI"),
+        WiringRule(from_pin="SCK", to_component="esp32", to_pin="GPIO18", description="SPI Clock"),
+    ],
+    libraries=["Adafruit GFX Library", "Adafruit ILI9341"],
+    unit_price_inr=650.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="240x320 RGB color TFT LCD display module with SPI bus",
+    electrical_constraints=["3.3V logic level only", "Hardware SPI on GPIO 18/23 recommended"],
+)
+
+
 # ── Catalog Registry ──────────────────────────────────────────────────────────
 
 CATALOG: dict[str, CatalogComponent] = {
@@ -261,6 +325,8 @@ CATALOG: dict[str, CatalogComponent] = {
         BUZZER,
         PUSH_BUTTON,
         POTENTIOMETER,
+        MQ135,
+        TFT_ILI9341,
     ]
 }
 

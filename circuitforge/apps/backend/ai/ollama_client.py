@@ -159,6 +159,7 @@ def extract_user_requirements(user_request: str) -> dict:
     selected_components: list[str] = []
 
     has_dist = any(k in req for k in ['ultrasonic', 'distance', 'hc-sr04', 'hcsr04', 'sr04', 'obstacle', 'proximity', 'range'])
+    has_gas = any(k in req for k in ['mq135', 'mq-135', 'gas', 'air quality', 'air', 'smoke', 'pollution', 'co2'])
     has_temp = any(k in req for k in ['dht', 'temperature', 'humidity', 'temp', 'ambient', 'weather'])
     has_generic_sensor = 'sensor' in req
 
@@ -168,12 +169,21 @@ def extract_user_requirements(user_request: str) -> dict:
             threshold_unit = 'cm'
         if threshold_value is None:
             threshold_value = 20.0
-    elif has_temp or (has_generic_sensor and not has_dist):
+    elif has_gas:
+        selected_components.append('mq135')
+        if threshold_unit is None:
+            threshold_unit = 'PPM'
+        if threshold_value is None:
+            threshold_value = 1200.0
+    elif has_temp or (has_generic_sensor and not has_dist and not has_gas):
         selected_components.append('dht22')
         if threshold_unit is None:
             threshold_unit = 'Celsius'
         if threshold_value is None:
             threshold_value = 30.0
+
+    if any(k in req for k in ['tft', 'ili9341', 'display', 'screen', 'lcd']):
+        selected_components.append('tft_ili9341')
 
     if any(k in req for k in ['potentiometer', 'pot', 'knob', 'analog input', 'dial']):
         selected_components.append('potentiometer_10k')
@@ -232,6 +242,15 @@ def build_dynamic_spec(user_request: str, req_data: dict, gemma_data: Optional[d
     elif 'temperature' in req_lower and 'dht' in req_lower:
         name = 'ESP32 Temperature Monitor'
         desc = f'ESP32 temperature monitoring system using DHT22 and alert indicator at {thresh or 30} °C'
+    elif 'mq135' in req_lower or 'gas' in req_lower or 'air' in req_lower:
+        if 'temperature' in name.lower() or name == 'Custom IoT Project':
+            name = 'ESP32 Air Quality & Gas Monitor'
+            if 'tft' in req_lower:
+                name = 'ESP32 Air Quality Monitor with TFT Display'
+            desc = 'ESP32 air quality monitoring system using MQ-135 sensor'
+    elif 'tft' in req_lower and ('temperature' in name.lower() or name == 'Custom IoT Project'):
+        name = 'ESP32 Display Dashboard'
+        desc = 'ESP32 display system with ILI9341 TFT screen'
 
     components: list[ComponentInstance] = []
     pin_assignments: list[PinAssignment] = []
@@ -288,6 +307,32 @@ def build_dynamic_spec(user_request: str, req_data: dict, gemma_data: Optional[d
             pin_assignments.append(PinAssignment(
                 component_id='push_button', component_instance=instance_id, component_pin='1.l',
                 gpio_pin=15, description='Tactile Button Signal'
+            ))
+        elif cid == 'mq135':
+            pin_assignments.append(PinAssignment(
+                component_id='mq135', component_instance=instance_id, component_pin='AOUT',
+                gpio_pin=34, description='MQ-135 Gas Analog Out (ADC)'
+            ))
+        elif cid == 'tft_ili9341':
+            pin_assignments.append(PinAssignment(
+                component_id='tft_ili9341', component_instance=instance_id, component_pin='CS',
+                gpio_pin=15, description='TFT SPI Chip Select'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='tft_ili9341', component_instance=instance_id, component_pin='DC',
+                gpio_pin=2, description='TFT Data/Command Select'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='tft_ili9341', component_instance=instance_id, component_pin='RESET',
+                gpio_pin=4, description='TFT Reset'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='tft_ili9341', component_instance=instance_id, component_pin='MOSI',
+                gpio_pin=23, description='TFT SPI MOSI'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='tft_ili9341', component_instance=instance_id, component_pin='SCK',
+                gpio_pin=18, description='TFT SPI Clock'
             ))
 
     criteria = [f'Execute IoT behavior: {behavior}']
@@ -381,6 +426,8 @@ Requirements:
 - If an LED is NOT listed in components, NEVER define or use LED, LED_PIN, or digitalWrite for an LED.
 - If a DHT sensor is NOT listed in components, NEVER include DHT.h or use DHT.
 - If a buzzer is NOT listed in components, NEVER use buzzer or BUZZER_PIN.
+- If a TFT display is NOT listed in components, NEVER include Adafruit_ILI9341.h or use tft.
+- If an MQ-135 gas sensor is NOT listed in components, NEVER use MQ135, MQ135_PIN, or gas reading logic.
 - Never use Servo.h or SoftwareSerial.h on ESP32.
 - Include setup() and loop() functions.
 - Set correct pinMode() for all inputs and outputs in setup().
@@ -411,6 +458,10 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
     if "dht22" in comp_ids:
         lines.append("#include <Adafruit_Sensor.h>")
         lines.append("#include <DHT.h>")
+    if "tft_ili9341" in comp_ids:
+        lines.append("#include <SPI.h>")
+        lines.append("#include <Adafruit_GFX.h>")
+        lines.append("#include <Adafruit_ILI9341.h>")
 
     lines.append("")
 
@@ -436,12 +487,25 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
     if "push_button" in comp_ids:
         btn = pins.get("1.L", pins.get("1.R", 15))
         lines.append(f"#define BUTTON_PIN {btn}")
+    if "mq135" in comp_ids:
+        mq_pin = pins.get("AOUT", 34)
+        lines.append(f"#define MQ135_PIN {mq_pin}")
+    if "tft_ili9341" in comp_ids:
+        cs = pins.get("CS", 15)
+        dc = pins.get("DC", 2)
+        rst = pins.get("RESET", pins.get("RST", 4))
+        lines.append(f"#define TFT_CS {cs}")
+        lines.append(f"#define TFT_DC {dc}")
+        lines.append(f"#define TFT_RST {rst}")
 
     lines.append(f"const float THRESHOLD_VAL = {thresh};")
     lines.append("")
 
     if "dht22" in comp_ids:
         lines.append("DHT dht(DHTPIN, DHTTYPE);")
+        lines.append("")
+    if "tft_ili9341" in comp_ids:
+        lines.append("Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);")
         lines.append("")
 
     # setup()
@@ -465,12 +529,88 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
         lines.append("  pinMode(ECHO_PIN, INPUT);")
     if "dht22" in comp_ids:
         lines.append("  dht.begin();")
+    if "mq135" in comp_ids:
+        lines.append("  pinMode(MQ135_PIN, INPUT);")
+    if "tft_ili9341" in comp_ids:
+        lines.append("  tft.begin();")
+        lines.append("  tft.setRotation(1);")
+        lines.append("  tft.fillScreen(ILI9341_BLACK);")
+        lines.append("  tft.setTextColor(ILI9341_WHITE);")
+        lines.append("  tft.setTextSize(2);")
+        lines.append("  tft.setCursor(10, 10);")
+        lines.append('  tft.println(F("CircuitForge AI"));')
+        lines.append("  tft.setTextSize(1);")
+        lines.append("  tft.setCursor(10, 40);")
+        lines.append(f'  tft.println(F("{spec.name}"));')
+        lines.append("  delay(1000);")
     lines.append("}")
     lines.append("")
 
     # loop()
     lines.append("void loop() {")
-    if "dht22" in comp_ids and "potentiometer_10k" in comp_ids:
+    if "mq135" in comp_ids and "tft_ili9341" in comp_ids:
+        lines.append("  int rawGas = analogRead(MQ135_PIN);")
+        lines.append("  float ppm = (rawGas / 4095.0) * 2000.0; // Estimated air quality PPM")
+        lines.append('  Serial.print(F("Gas ADC: ")); Serial.print(rawGas); Serial.print(F(" | Est PPM: ")); Serial.println(ppm, 1);')
+        lines.append("  bool alarm = (ppm > THRESHOLD_VAL);")
+        lines.append("")
+        lines.append("  tft.fillScreen(ILI9341_BLACK);")
+        lines.append("  tft.setTextSize(2);")
+        lines.append("  tft.setCursor(10, 15);")
+        lines.append("  tft.setTextColor(ILI9341_CYAN);")
+        lines.append('  tft.println(F("Air Quality Monitor"));')
+        lines.append("")
+        lines.append("  tft.setTextSize(2);")
+        lines.append("  tft.setCursor(10, 55);")
+        lines.append("  tft.setTextColor(ILI9341_WHITE);")
+        lines.append('  tft.print(F("Raw: ")); tft.println(rawGas);')
+        lines.append("")
+        lines.append("  tft.setCursor(10, 95);")
+        lines.append('  tft.print(F("PPM: ")); tft.println((int)ppm);')
+        lines.append("")
+        lines.append("  tft.setCursor(10, 140);")
+        lines.append("  if (alarm) {")
+        lines.append("    tft.setTextColor(ILI9341_RED);")
+        lines.append('    tft.println(F("STATUS: ALERT!"));')
+        lines.append("  } else {")
+        lines.append("    tft.setTextColor(ILI9341_GREEN);")
+        lines.append('    tft.println(F("STATUS: NORMAL"));')
+        lines.append("  }")
+        lines.append("  delay(1000);")
+    elif "mq135" in comp_ids:
+        lines.append("  int rawGas = analogRead(MQ135_PIN);")
+        lines.append("  float ppm = (rawGas / 4095.0) * 2000.0;")
+        lines.append('  Serial.print(F("Gas ADC: ")); Serial.print(rawGas); Serial.print(F(" | PPM: ")); Serial.println(ppm, 1);')
+        lines.append("  bool alarm = (ppm > THRESHOLD_VAL);")
+        lines.append("  delay(1000);")
+    elif "tft_ili9341" in comp_ids and "dht22" in comp_ids:
+        lines.append("  float t = dht.readTemperature();")
+        lines.append("  float h = dht.readHumidity();")
+        lines.append("  bool alarm = (!isnan(t) && t > THRESHOLD_VAL);")
+        lines.append("  tft.fillScreen(ILI9341_BLACK);")
+        lines.append("  tft.setTextSize(2);")
+        lines.append("  tft.setCursor(10, 20);")
+        lines.append("  tft.setTextColor(ILI9341_YELLOW);")
+        lines.append('  tft.println(F("Temp & Humidity"));')
+        lines.append("  tft.setCursor(10, 60);")
+        lines.append("  tft.setTextColor(ILI9341_WHITE);")
+        lines.append('  tft.print(F("Temp: ")); tft.print(t, 1); tft.println(F(" C"));')
+        lines.append("  tft.setCursor(10, 100);")
+        lines.append('  tft.print(F("Humidity: ")); tft.print(h, 1); tft.println(F(" %"));')
+        lines.append("  delay(2000);")
+    elif "tft_ili9341" in comp_ids:
+        lines.append("  tft.fillScreen(ILI9341_BLACK);")
+        lines.append("  tft.setTextSize(2);")
+        lines.append("  tft.setCursor(10, 30);")
+        lines.append("  tft.setTextColor(ILI9341_CYAN);")
+        lines.append('  tft.println(F("CircuitForge TFT"));')
+        lines.append("  tft.setTextSize(1);")
+        lines.append("  tft.setCursor(10, 70);")
+        lines.append("  tft.setTextColor(ILI9341_WHITE);")
+        lines.append('  tft.print(F("Uptime: ")); tft.print(millis() / 1000); tft.println(F("s"));')
+        lines.append("  bool alarm = false;")
+        lines.append("  delay(1000);")
+    elif "dht22" in comp_ids and "potentiometer_10k" in comp_ids:
         lines.append("  delay(2000);")
         lines.append("  int potRaw = analogRead(POT_PIN);")
         lines.append("  float dynamicThreshold = 20.0 + (potRaw / 4095.0) * 25.0;")
@@ -532,7 +672,7 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
         lines.append("  digitalWrite(BUZZER_PIN, alarm ? HIGH : LOW);")
         has_actuator = True
 
-    if not has_actuator:
+    if not has_actuator and "tft_ili9341" not in comp_ids:
         lines.append('  if (alarm) { Serial.println(F("[ALERT] Trigger condition active!")); }')
 
     lines.append("}")
@@ -576,6 +716,14 @@ def validate_firmware_against_spec(code: str, spec: ProjectSpec) -> tuple[bool, 
         if re.search(r'\bBUTTON_PIN\b|\bbuttonPin\b', code, re.IGNORECASE):
             errors.append("Hallucinated Button in firmware when Button is not in project components")
 
+    if "mq135" not in comp_ids:
+        if re.search(r'\bMQ135\b|\bmq135\b|\bMQ135_PIN\b', code, re.IGNORECASE):
+            errors.append("Hallucinated MQ-135 in firmware when MQ-135 is not in project components")
+
+    if "tft_ili9341" not in comp_ids:
+        if re.search(r'<Adafruit_ILI9341\.h>|\btft\b|\bILI9341\b', code, re.IGNORECASE):
+            errors.append("Hallucinated TFT display in firmware when TFT is not in project components")
+
     if re.search(r'<SoftwareSerial\.h>|<Servo\.h>|myservo', code, re.IGNORECASE):
         errors.append("Incompatible library (SoftwareSerial or Servo) for ESP32")
 
@@ -588,6 +736,12 @@ def validate_firmware_against_spec(code: str, spec: ProjectSpec) -> tuple[bool, 
 
     if "potentiometer_10k" in comp_ids and not re.search(r'analogRead', code, re.IGNORECASE):
         errors.append("Missing potentiometer analogRead logic")
+
+    if "mq135" in comp_ids and not re.search(r'analogRead', code, re.IGNORECASE):
+        errors.append("Missing MQ-135 analogRead logic")
+
+    if "tft_ili9341" in comp_ids and not re.search(r'Adafruit_ILI9341|tft\.begin', code, re.IGNORECASE):
+        errors.append("Missing TFT display logic")
 
     if "led_red" in comp_ids and not re.search(r'\bLED\b|\bled\b|digitalWrite', code, re.IGNORECASE):
         errors.append("Missing LED actuation logic")

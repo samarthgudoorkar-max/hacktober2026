@@ -155,3 +155,51 @@ async def test_diversity_pipeline_requests():
     assert len({proj_a.id, proj_b.id, proj_c.id}) == 3, "Projects must have unique IDs"
     assert proj_a.user_request != proj_b.user_request != proj_c.user_request, "Requests must be preserved individually"
 
+
+@pytest.mark.asyncio
+async def test_tft_mq135_generation():
+    """
+    Test the user prompt: 'try tft and mq135 to esp32'.
+    Ensures:
+    1. Correct components: mq135, tft_ili9341.
+    2. Zero hallucinated LED, DHT, buzzer components.
+    3. Proper pin assignments for SPI TFT and analog MQ-135.
+    4. Compilable Arduino firmware using Adafruit_ILI9341 without LED code.
+    5. Clean Wokwi diagram with correct parts and connections.
+    """
+    req = "try tft and mq135 to esp32"
+    spec, _ = await plan_project(req)
+    val_spec = validate_project_spec(spec)
+    assert val_spec.valid, f"Spec validation failed: {val_spec.errors}"
+
+    comp_ids = {c.catalog_id for c in spec.components}
+    assert "mq135" in comp_ids, "Spec must include mq135"
+    assert "tft_ili9341" in comp_ids, "Spec must include tft_ili9341"
+    assert "led_red" not in comp_ids, "Spec must NOT include led_red"
+    assert "dht22" not in comp_ids, "Spec must NOT include dht22"
+    assert "buzzer" not in comp_ids, "Spec must NOT include buzzer"
+
+    # Diagram
+    diag = generate_diagram(spec)
+    val_diag = validate_diagram(diag)
+    assert val_diag.valid, f"Diagram validation failed: {val_diag.errors}"
+    part_types = {p["type"] for p in diag["parts"]}
+    assert "wokwi-gas-sensor" in part_types
+    assert "wokwi-ili9341" in part_types
+
+    # Firmware
+    fw, _ = await generate_firmware(spec)
+    assert "Adafruit_ILI9341" in fw, "Firmware must use Adafruit_ILI9341"
+    assert "analogRead" in fw, "Firmware must read analog MQ135"
+    assert "LED" not in fw and "led" not in fw, "Firmware must NOT contain any LED code"
+    assert "DHT" not in fw, "Firmware must NOT contain DHT code"
+    assert "BUZZER" not in fw, "Firmware must NOT contain buzzer code"
+
+    # Compile firmware
+    if arduino_cli_available():
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td)
+            (p / "sketch.ino").write_text(fw, encoding="utf-8")
+            res = await compile_firmware(p, "test_tft_mq135")
+            assert res["success"], f"Compilation failed for TFT+MQ135:\n{res['stderr']}"
+
