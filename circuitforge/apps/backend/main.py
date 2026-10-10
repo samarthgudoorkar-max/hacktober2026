@@ -87,6 +87,7 @@ async def health():
 
 
 @app.get("/api/system")
+@app.get("/api/system/status")
 async def system_status():
     return await get_system_status()
 
