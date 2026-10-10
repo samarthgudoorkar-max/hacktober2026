@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Cpu, Zap, Thermometer, Radio, Volume2, ArrowRight, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { createProject, planProject, getErrorMessage, getSystemStatus } from '../utils/api'
+import { ThemeToggle } from '../components/ThemeToggle'
 import type { SystemStatus } from '../types'
 
 const EXAMPLES = [
@@ -75,9 +76,10 @@ export default function HomePage() {
           <a href="/setup" className="text-sm text-gray-400 hover:text-cyan-400 transition-colors">
             System Setup
           </a>
-          <a href="/projects" className="text-sm text-gray-400 hover:text-cyan-400 transition-colors ml-4">
+          <a href="/projects" className="text-sm text-gray-400 hover:text-cyan-400 transition-colors ml-4 mr-4">
             Projects
           </a>
+          <ThemeToggle />
         </div>
       </header>
 

@@ -13,6 +13,7 @@ import {
   downloadProject, getErrorMessage
 } from '../utils/api'
 import { CircuitEditor } from '../components/CircuitEditor'
+import { ThemeToggle } from '../components/ThemeToggle'
 import type { Project } from '../types'
 import {
   STATUS_LABELS, STATUS_CLASS, SIM_LABELS, SIM_CLASS,
@@ -189,6 +190,7 @@ export default function ProjectWorkspacePage() {
             >
               <Download className="w-4 h-4" /> Export
             </button>
+            <ThemeToggle />
           </div>
 
           {/* Tabs */}

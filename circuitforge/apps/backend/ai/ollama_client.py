@@ -161,6 +161,17 @@ def extract_user_requirements(user_request: str) -> dict:
     has_dist = any(k in req for k in ['ultrasonic', 'distance', 'hc-sr04', 'hcsr04', 'sr04', 'obstacle', 'proximity', 'range'])
     has_gas = any(k in req for k in ['mq135', 'mq-135', 'gas', 'air quality', 'air', 'smoke', 'pollution', 'co2'])
     has_temp = any(k in req for k in ['dht', 'temperature', 'humidity', 'temp', 'ambient', 'weather'])
+    has_ldr = any(k in req for k in ['photoresistor', 'ldr', 'light sensor', 'lux', 'photocell', 'ambient light', 'brightness sensor', 'sunlight', 'darkness'])
+    has_pir = any(k in req for k in ['pir', 'motion', 'presence', 'movement', 'occupancy', 'intruder'])
+    has_servo = any(k in req for k in ['servo', 'sg90', 'motor', 'sweep', 'angle'])
+    has_relay = any(k in req for k in ['relay', 'mains', '220v', 'appliance', 'ac switch', 'high power'])
+    has_slide_switch = any(k in req for k in ['slide switch', 'toggle switch', 'spdt switch'])
+    has_light_btn = any(k in req for k in ['light button', 'illuminated button', 'button with light', 'button light', 'led button', 'lamp button', 'light switch'])
+    has_rgb = any(k in req for k in ['rgb', 'color led', 'rgb led', 'multicolor'])
+    has_oled = any(k in req for k in ['oled', 'ssd1306', '128x64'])
+    has_lcd = any(k in req for k in ['lcd1602', '16x2', 'character lcd', 'i2c lcd'])
+    has_tft = any(k in req for k in ['tft', 'ili9341', 'touchscreen', 'color screen'])
+    has_mpu = any(k in req for k in ['mpu6050', 'mpu', 'gyro', 'accelerometer', 'gyroscope', 'imu', 'tilt'])
     has_generic_sensor = 'sensor' in req
 
     if has_dist:
@@ -175,29 +186,64 @@ def extract_user_requirements(user_request: str) -> dict:
             threshold_unit = 'PPM'
         if threshold_value is None:
             threshold_value = 1200.0
-    elif has_temp or (has_generic_sensor and not has_dist and not has_gas):
+    elif has_ldr:
+        selected_components.append('photoresistor')
+        if threshold_unit is None:
+            threshold_unit = 'ADC'
+        if threshold_value is None:
+            threshold_value = 1500.0
+    elif has_pir:
+        selected_components.append('pir_motion')
+    elif has_temp or (has_generic_sensor and not has_dist and not has_gas and not has_ldr):
         selected_components.append('dht22')
         if threshold_unit is None:
             threshold_unit = 'Celsius'
         if threshold_value is None:
             threshold_value = 30.0
 
-    if any(k in req for k in ['tft', 'ili9341', 'display', 'screen', 'lcd']):
+    if has_tft:
         selected_components.append('tft_ili9341')
+    elif has_oled:
+        selected_components.append('ssd1306_i2c')
+    elif has_lcd:
+        selected_components.append('lcd1602_i2c')
+
+    if has_servo:
+        selected_components.append('servo')
+
+    if has_relay:
+        selected_components.append('relay')
+
+    if has_slide_switch:
+        selected_components.append('slide_switch')
+
+    if has_mpu:
+        selected_components.append('mpu6050')
+
+    if has_light_btn:
+        selected_components.append('light_button')
+    elif any(k in req for k in ['button', 'pushbutton', 'switch', 'press']):
+        selected_components.append('push_button')
+        selected_components.append('resistor_10k')
+
+    if has_rgb:
+        selected_components.append('rgb_led')
+        selected_components.append('resistor_220')
+    elif 'green' in req and 'led' in req:
+        selected_components.append('led_green')
+        selected_components.append('resistor_220')
+    elif 'blue' in req and 'led' in req:
+        selected_components.append('led_blue')
+        selected_components.append('resistor_220')
+    elif any(k in req for k in ['led', 'light', 'lamp', 'indicator']) and not has_light_btn and not has_ldr:
+        selected_components.append('led_red')
+        selected_components.append('resistor_220')
 
     if any(k in req for k in ['potentiometer', 'pot', 'knob', 'analog input', 'dial']):
         selected_components.append('potentiometer_10k')
 
-    if any(k in req for k in ['led', 'light', 'lamp', 'indicator']):
-        selected_components.append('led_red')
-        selected_components.append('resistor_220')
-
     if any(k in req for k in ['buzzer', 'alarm', 'sound', 'beep', 'tone', 'audio', 'siren']):
         selected_components.append('buzzer')
-
-    if any(k in req for k in ['button', 'pushbutton', 'switch', 'press']):
-        selected_components.append('push_button')
-        selected_components.append('resistor_10k')
 
     # Fallback default if completely unspecified
     if not selected_components:
@@ -229,10 +275,10 @@ def build_dynamic_spec(user_request: str, req_data: dict, gemma_data: Optional[d
     desc = (gemma_data and gemma_data.get('description')) or f'IoT hardware system configured for: {user_request}'
     behavior = (gemma_data and gemma_data.get('behavior')) or user_request
 
-    # Guard against Gemma returning the hardcoded few-shot template title for unrelated projects
+    # Guard against Gemma returning generic template title
     req_lower = user_request.lower()
     if 'ultrasonic' in req_lower or 'distance' in req_lower:
-        if 'temperature' in name.lower():
+        if 'temperature' in name.lower() or name == 'Custom IoT Project':
             name = 'Ultrasonic Distance Warning System'
             desc = 'ESP32 system monitoring obstacle distance with HC-SR04 and trigger alert'
     elif 'environmental' in req_lower:
@@ -248,6 +294,21 @@ def build_dynamic_spec(user_request: str, req_data: dict, gemma_data: Optional[d
             if 'tft' in req_lower:
                 name = 'ESP32 Air Quality Monitor with TFT Display'
             desc = 'ESP32 air quality monitoring system using MQ-135 sensor'
+    elif 'light button' in req_lower or 'illuminated' in req_lower:
+        name = 'ESP32 Light Button System'
+        desc = 'Illuminated push button with active visual status feedback'
+    elif 'photoresistor' in req_lower or 'light sensor' in req_lower or 'ldr' in req_lower:
+        name = 'ESP32 Ambient Light Monitor'
+        desc = 'ESP32 ambient light monitoring system using photoresistor sensor'
+    elif 'pir' in req_lower or 'motion' in req_lower:
+        name = 'ESP32 PIR Motion Detector'
+        desc = 'ESP32 motion detection and security alert system'
+    elif 'servo' in req_lower:
+        name = 'ESP32 Servo Actuator Controller'
+        desc = 'ESP32 precision servo position controller'
+    elif 'relay' in req_lower:
+        name = 'ESP32 Relay Appliance Switch'
+        desc = 'ESP32 relay module for automated appliance and lighting control'
     elif 'tft' in req_lower and ('temperature' in name.lower() or name == 'Custom IoT Project'):
         name = 'ESP32 Display Dashboard'
         desc = 'ESP32 display system with ILI9341 TFT screen'
@@ -333,6 +394,90 @@ def build_dynamic_spec(user_request: str, req_data: dict, gemma_data: Optional[d
             pin_assignments.append(PinAssignment(
                 component_id='tft_ili9341', component_instance=instance_id, component_pin='SCK',
                 gpio_pin=18, description='TFT SPI Clock'
+            ))
+        elif cid == 'photoresistor':
+            pin_assignments.append(PinAssignment(
+                component_id='photoresistor', component_instance=instance_id, component_pin='AO',
+                gpio_pin=35, description='LDR Light Sensor Analog Output'
+            ))
+        elif cid == 'pir_motion':
+            pin_assignments.append(PinAssignment(
+                component_id='pir_motion', component_instance=instance_id, component_pin='OUT',
+                gpio_pin=27, description='PIR Motion Output Signal'
+            ))
+        elif cid == 'servo':
+            pin_assignments.append(PinAssignment(
+                component_id='servo', component_instance=instance_id, component_pin='PWM',
+                gpio_pin=13, description='Servo Motor PWM Control'
+            ))
+        elif cid == 'slide_switch':
+            pin_assignments.append(PinAssignment(
+                component_id='slide_switch', component_instance=instance_id, component_pin='2',
+                gpio_pin=14, description='Slide Switch Terminal'
+            ))
+        elif cid == 'light_button':
+            pin_assignments.append(PinAssignment(
+                component_id='light_button', component_instance=instance_id, component_pin='1.L',
+                gpio_pin=15, description='Light Button Signal (Input)'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='light_button', component_instance=instance_id, component_pin='LED+',
+                gpio_pin=2, description='Light Button LED Indicator'
+            ))
+        elif cid == 'relay':
+            pin_assignments.append(PinAssignment(
+                component_id='relay', component_instance=instance_id, component_pin='IN',
+                gpio_pin=26, description='Relay Signal Input'
+            ))
+        elif cid == 'rgb_led':
+            pin_assignments.append(PinAssignment(
+                component_id='rgb_led', component_instance=instance_id, component_pin='R',
+                gpio_pin=25, description='RGB Red Channel'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='rgb_led', component_instance=instance_id, component_pin='G',
+                gpio_pin=33, description='RGB Green Channel'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='rgb_led', component_instance=instance_id, component_pin='B',
+                gpio_pin=32, description='RGB Blue Channel'
+            ))
+        elif cid == 'led_green':
+            pin_assignments.append(PinAssignment(
+                component_id='led_green', component_instance=instance_id, component_pin='A',
+                gpio_pin=12, description='Green LED Anode'
+            ))
+        elif cid == 'led_blue':
+            pin_assignments.append(PinAssignment(
+                component_id='led_blue', component_instance=instance_id, component_pin='A',
+                gpio_pin=14, description='Blue LED Anode'
+            ))
+        elif cid == 'lcd1602_i2c':
+            pin_assignments.append(PinAssignment(
+                component_id='lcd1602_i2c', component_instance=instance_id, component_pin='SDA',
+                gpio_pin=21, description='LCD I2C Data'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='lcd1602_i2c', component_instance=instance_id, component_pin='SCL',
+                gpio_pin=22, description='LCD I2C Clock'
+            ))
+        elif cid == 'ssd1306_i2c':
+            pin_assignments.append(PinAssignment(
+                component_id='ssd1306_i2c', component_instance=instance_id, component_pin='SDA',
+                gpio_pin=21, description='OLED I2C Data'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='ssd1306_i2c', component_instance=instance_id, component_pin='SCL',
+                gpio_pin=22, description='OLED I2C Clock'
+            ))
+        elif cid == 'mpu6050':
+            pin_assignments.append(PinAssignment(
+                component_id='mpu6050', component_instance=instance_id, component_pin='SDA',
+                gpio_pin=21, description='MPU6050 I2C Data'
+            ))
+            pin_assignments.append(PinAssignment(
+                component_id='mpu6050', component_instance=instance_id, component_pin='SCL',
+                gpio_pin=22, description='MPU6050 I2C Clock'
             ))
 
     criteria = [f'Execute IoT behavior: {behavior}']
@@ -442,7 +587,7 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
     """
     Synthesize complete, compilable Arduino C++ firmware matching the exact components,
     pin assignments, thresholds, and behavior defined in ProjectSpec.
-    Never introduces components (like LEDs or buzzers) that are not in spec.components.
+    Never introduces components that are not in spec.components.
     """
     pins = {pa.component_pin.upper(): pa.gpio_pin for pa in spec.pin_assignments}
     comp_ids = {c.catalog_id for c in spec.components}
@@ -462,51 +607,84 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
         lines.append("#include <SPI.h>")
         lines.append("#include <Adafruit_GFX.h>")
         lines.append("#include <Adafruit_ILI9341.h>")
+    if "ssd1306_i2c" in comp_ids:
+        lines.append("#include <Wire.h>")
+        lines.append("#include <Adafruit_GFX.h>")
+        lines.append("#include <Adafruit_SSD1306.h>")
+    if "lcd1602_i2c" in comp_ids:
+        lines.append("#include <Wire.h>")
+        lines.append("#include <LiquidCrystal_I2C.h>")
+    if "servo" in comp_ids:
+        lines.append("#include <ESP32Servo.h>")
+    if "mpu6050" in comp_ids:
+        lines.append("#include <Wire.h>")
+        lines.append("#include <Adafruit_MPU6050.h>")
+        lines.append("#include <Adafruit_Sensor.h>")
 
     lines.append("")
 
     # Pin & Parameter Definitions
     if "dht22" in comp_ids:
-        dht_pin = pins.get("SDA", 4)
-        lines.append(f"#define DHTPIN {dht_pin}")
+        lines.append(f"#define DHTPIN {pins.get('SDA', 4)}")
         lines.append("#define DHTTYPE DHT22")
     if "hc_sr04" in comp_ids:
-        trig = pins.get("TRIG", 5)
-        echo = pins.get("ECHO", 18)
-        lines.append(f"#define TRIG_PIN {trig}")
-        lines.append(f"#define ECHO_PIN {echo}")
+        lines.append(f"#define TRIG_PIN {pins.get('TRIG', 5)}")
+        lines.append(f"#define ECHO_PIN {pins.get('ECHO', 18)}")
     if "led_red" in comp_ids:
-        led = pins.get("A", 2)
-        lines.append(f"#define LED_PIN {led}")
+        lines.append(f"#define LED_PIN {pins.get('A', 2)}")
+    if "led_green" in comp_ids:
+        lines.append(f"#define LED_GREEN_PIN {pins.get('A', 12)}")
+    if "led_blue" in comp_ids:
+        lines.append(f"#define LED_BLUE_PIN {pins.get('A', 14)}")
+    if "rgb_led" in comp_ids:
+        lines.append(f"#define RGB_RED_PIN {pins.get('R', 25)}")
+        lines.append(f"#define RGB_GREEN_PIN {pins.get('G', 33)}")
+        lines.append(f"#define RGB_BLUE_PIN {pins.get('B', 32)}")
     if "buzzer" in comp_ids:
-        buzzer = pins.get("+", 19)
-        lines.append(f"#define BUZZER_PIN {buzzer}")
+        lines.append(f"#define BUZZER_PIN {pins.get('+', 19)}")
     if "potentiometer_10k" in comp_ids:
-        pot = pins.get("SIG", 34)
-        lines.append(f"#define POT_PIN {pot}")
+        lines.append(f"#define POT_PIN {pins.get('SIG', 34)}")
+    if "photoresistor" in comp_ids:
+        lines.append(f"#define LDR_PIN {pins.get('AO', 35)}")
+    if "pir_motion" in comp_ids:
+        lines.append(f"#define PIR_PIN {pins.get('OUT', 27)}")
     if "push_button" in comp_ids:
         btn = pins.get("1.L", pins.get("1.R", 15))
         lines.append(f"#define BUTTON_PIN {btn}")
+    if "light_button" in comp_ids:
+        lines.append(f"#define BUTTON_PIN {pins.get('1.L', 15)}")
+        lines.append(f"#define BUTTON_LED_PIN {pins.get('LED+', 2)}")
+    if "slide_switch" in comp_ids:
+        lines.append(f"#define SWITCH_PIN {pins.get('2', 14)}")
+    if "relay" in comp_ids:
+        lines.append(f"#define RELAY_PIN {pins.get('IN', 26)}")
+    if "servo" in comp_ids:
+        lines.append(f"#define SERVO_PIN {pins.get('PWM', 13)}")
     if "mq135" in comp_ids:
-        mq_pin = pins.get("AOUT", 34)
-        lines.append(f"#define MQ135_PIN {mq_pin}")
+        lines.append(f"#define MQ135_PIN {pins.get('AOUT', 34)}")
     if "tft_ili9341" in comp_ids:
-        cs = pins.get("CS", 15)
-        dc = pins.get("DC", 2)
-        rst = pins.get("RESET", pins.get("RST", 4))
-        lines.append(f"#define TFT_CS {cs}")
-        lines.append(f"#define TFT_DC {dc}")
-        lines.append(f"#define TFT_RST {rst}")
+        lines.append(f"#define TFT_CS {pins.get('CS', 15)}")
+        lines.append(f"#define TFT_DC {pins.get('DC', 2)}")
+        lines.append(f"#define TFT_RST {pins.get('RESET', pins.get('RST', 4))}")
 
     lines.append(f"const float THRESHOLD_VAL = {thresh};")
     lines.append("")
 
+    # Device Object Instantiations
     if "dht22" in comp_ids:
         lines.append("DHT dht(DHTPIN, DHTTYPE);")
-        lines.append("")
     if "tft_ili9341" in comp_ids:
         lines.append("Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);")
-        lines.append("")
+    if "ssd1306_i2c" in comp_ids:
+        lines.append("Adafruit_SSD1306 display(128, 64, &Wire, -1);")
+    if "lcd1602_i2c" in comp_ids:
+        lines.append("LiquidCrystal_I2C lcd(0x27, 16, 2);")
+    if "servo" in comp_ids:
+        lines.append("Servo myServo;")
+    if "mpu6050" in comp_ids:
+        lines.append("Adafruit_MPU6050 mpu;")
+
+    lines.append("")
 
     # setup()
     lines.append("void setup() {")
@@ -515,100 +693,95 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
     lines.append(f'  Serial.println(F("--- {spec.name} Initialized ---"));')
 
     if "led_red" in comp_ids:
-        lines.append("  pinMode(LED_PIN, OUTPUT);")
-        lines.append("  digitalWrite(LED_PIN, LOW);")
+        lines.append("  pinMode(LED_PIN, OUTPUT); digitalWrite(LED_PIN, LOW);")
+    if "led_green" in comp_ids:
+        lines.append("  pinMode(LED_GREEN_PIN, OUTPUT); digitalWrite(LED_GREEN_PIN, LOW);")
+    if "led_blue" in comp_ids:
+        lines.append("  pinMode(LED_BLUE_PIN, OUTPUT); digitalWrite(LED_BLUE_PIN, LOW);")
+    if "rgb_led" in comp_ids:
+        lines.append("  pinMode(RGB_RED_PIN, OUTPUT); pinMode(RGB_GREEN_PIN, OUTPUT); pinMode(RGB_BLUE_PIN, OUTPUT);")
     if "buzzer" in comp_ids:
-        lines.append("  pinMode(BUZZER_PIN, OUTPUT);")
-        lines.append("  digitalWrite(BUZZER_PIN, LOW);")
+        lines.append("  pinMode(BUZZER_PIN, OUTPUT); digitalWrite(BUZZER_PIN, LOW);")
+    if "relay" in comp_ids:
+        lines.append("  pinMode(RELAY_PIN, OUTPUT); digitalWrite(RELAY_PIN, LOW);")
+    if "servo" in comp_ids:
+        lines.append("  myServo.attach(SERVO_PIN); myServo.write(90);")
     if "potentiometer_10k" in comp_ids:
         lines.append("  pinMode(POT_PIN, INPUT);")
+    if "photoresistor" in comp_ids:
+        lines.append("  pinMode(LDR_PIN, INPUT);")
+    if "pir_motion" in comp_ids:
+        lines.append("  pinMode(PIR_PIN, INPUT);")
     if "push_button" in comp_ids:
         lines.append("  pinMode(BUTTON_PIN, INPUT_PULLUP);")
+    if "light_button" in comp_ids:
+        lines.append("  pinMode(BUTTON_PIN, INPUT_PULLUP);")
+        lines.append("  pinMode(BUTTON_LED_PIN, OUTPUT); digitalWrite(BUTTON_LED_PIN, LOW);")
+    if "slide_switch" in comp_ids:
+        lines.append("  pinMode(SWITCH_PIN, INPUT_PULLUP);")
     if "hc_sr04" in comp_ids:
-        lines.append("  pinMode(TRIG_PIN, OUTPUT);")
-        lines.append("  pinMode(ECHO_PIN, INPUT);")
+        lines.append("  pinMode(TRIG_PIN, OUTPUT); pinMode(ECHO_PIN, INPUT);")
     if "dht22" in comp_ids:
         lines.append("  dht.begin();")
     if "mq135" in comp_ids:
         lines.append("  pinMode(MQ135_PIN, INPUT);")
+    if "lcd1602_i2c" in comp_ids:
+        lines.append("  lcd.init(); lcd.backlight();")
+        lines.append(f'  lcd.setCursor(0, 0); lcd.print(F("CircuitForge AI"));')
+    if "ssd1306_i2c" in comp_ids:
+        lines.append("  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { Serial.println(F(\"SSD1306 allocation failed\")); }")
+        lines.append("  display.clearDisplay(); display.setTextColor(WHITE); display.setTextSize(1);")
+        lines.append(f'  display.setCursor(0, 10); display.println(F("{spec.name}")); display.display();')
+    if "mpu6050" in comp_ids:
+        lines.append("  mpu.begin();")
     if "tft_ili9341" in comp_ids:
-        lines.append("  tft.begin();")
-        lines.append("  tft.setRotation(1);")
-        lines.append("  tft.fillScreen(ILI9341_BLACK);")
-        lines.append("  tft.setTextColor(ILI9341_WHITE);")
-        lines.append("  tft.setTextSize(2);")
-        lines.append("  tft.setCursor(10, 10);")
-        lines.append('  tft.println(F("CircuitForge AI"));')
-        lines.append("  tft.setTextSize(1);")
-        lines.append("  tft.setCursor(10, 40);")
-        lines.append(f'  tft.println(F("{spec.name}"));')
+        lines.append("  tft.begin(); tft.setRotation(1); tft.fillScreen(ILI9341_BLACK);")
+        lines.append("  tft.setTextColor(ILI9341_WHITE); tft.setTextSize(2);")
+        lines.append('  tft.setCursor(10, 10); tft.println(F("CircuitForge AI"));')
+        lines.append(f'  tft.setTextSize(1); tft.setCursor(10, 40); tft.println(F("{spec.name}"));')
         lines.append("  delay(1000);")
     lines.append("}")
     lines.append("")
 
     # loop()
     lines.append("void loop() {")
-    if "mq135" in comp_ids and "tft_ili9341" in comp_ids:
+    if "light_button" in comp_ids:
+        lines.append("  bool btnPressed = (digitalRead(BUTTON_PIN) == LOW);")
+        lines.append("  digitalWrite(BUTTON_LED_PIN, btnPressed ? HIGH : LOW);")
+        lines.append('  if (btnPressed) { Serial.println(F("[EVENT] Light Button Pressed -> Light ON")); }')
+        lines.append("  bool alarm = btnPressed;")
+        lines.append("  delay(50);")
+    elif "photoresistor" in comp_ids:
+        lines.append("  int ldrVal = analogRead(LDR_PIN);")
+        lines.append('  Serial.print(F("Ambient Light (ADC): ")); Serial.println(ldrVal);')
+        lines.append("  bool alarm = (ldrVal < THRESHOLD_VAL); // True when dark / light level low")
+        lines.append("  delay(200);")
+    elif "pir_motion" in comp_ids:
+        lines.append("  bool motion = (digitalRead(PIR_PIN) == HIGH);")
+        lines.append('  if (motion) { Serial.println(F("[ALERT] PIR Motion Detected!")); }')
+        lines.append("  bool alarm = motion;")
+        lines.append("  delay(100);")
+    elif "mq135" in comp_ids and "tft_ili9341" in comp_ids:
         lines.append("  int rawGas = analogRead(MQ135_PIN);")
         lines.append("  float ppm = (rawGas / 4095.0) * 2000.0; // Estimated air quality PPM")
         lines.append('  Serial.print(F("Gas ADC: ")); Serial.print(rawGas); Serial.print(F(" | Est PPM: ")); Serial.println(ppm, 1);')
         lines.append("  bool alarm = (ppm > THRESHOLD_VAL);")
         lines.append("")
         lines.append("  tft.fillScreen(ILI9341_BLACK);")
-        lines.append("  tft.setTextSize(2);")
-        lines.append("  tft.setCursor(10, 15);")
-        lines.append("  tft.setTextColor(ILI9341_CYAN);")
+        lines.append("  tft.setTextSize(2); tft.setCursor(10, 15); tft.setTextColor(ILI9341_CYAN);")
         lines.append('  tft.println(F("Air Quality Monitor"));')
-        lines.append("")
-        lines.append("  tft.setTextSize(2);")
-        lines.append("  tft.setCursor(10, 55);")
-        lines.append("  tft.setTextColor(ILI9341_WHITE);")
+        lines.append("  tft.setTextSize(2); tft.setCursor(10, 55); tft.setTextColor(ILI9341_WHITE);")
         lines.append('  tft.print(F("Raw: ")); tft.println(rawGas);')
-        lines.append("")
-        lines.append("  tft.setCursor(10, 95);")
-        lines.append('  tft.print(F("PPM: ")); tft.println((int)ppm);')
-        lines.append("")
+        lines.append('  tft.setCursor(10, 95); tft.print(F("PPM: ")); tft.println((int)ppm);')
         lines.append("  tft.setCursor(10, 140);")
-        lines.append("  if (alarm) {")
-        lines.append("    tft.setTextColor(ILI9341_RED);")
-        lines.append('    tft.println(F("STATUS: ALERT!"));')
-        lines.append("  } else {")
-        lines.append("    tft.setTextColor(ILI9341_GREEN);")
-        lines.append('    tft.println(F("STATUS: NORMAL"));')
-        lines.append("  }")
+        lines.append('  if (alarm) { tft.setTextColor(ILI9341_RED); tft.println(F("STATUS: ALERT!")); }')
+        lines.append('  else { tft.setTextColor(ILI9341_GREEN); tft.println(F("STATUS: NORMAL")); }')
         lines.append("  delay(1000);")
     elif "mq135" in comp_ids:
         lines.append("  int rawGas = analogRead(MQ135_PIN);")
         lines.append("  float ppm = (rawGas / 4095.0) * 2000.0;")
         lines.append('  Serial.print(F("Gas ADC: ")); Serial.print(rawGas); Serial.print(F(" | PPM: ")); Serial.println(ppm, 1);')
         lines.append("  bool alarm = (ppm > THRESHOLD_VAL);")
-        lines.append("  delay(1000);")
-    elif "tft_ili9341" in comp_ids and "dht22" in comp_ids:
-        lines.append("  float t = dht.readTemperature();")
-        lines.append("  float h = dht.readHumidity();")
-        lines.append("  bool alarm = (!isnan(t) && t > THRESHOLD_VAL);")
-        lines.append("  tft.fillScreen(ILI9341_BLACK);")
-        lines.append("  tft.setTextSize(2);")
-        lines.append("  tft.setCursor(10, 20);")
-        lines.append("  tft.setTextColor(ILI9341_YELLOW);")
-        lines.append('  tft.println(F("Temp & Humidity"));')
-        lines.append("  tft.setCursor(10, 60);")
-        lines.append("  tft.setTextColor(ILI9341_WHITE);")
-        lines.append('  tft.print(F("Temp: ")); tft.print(t, 1); tft.println(F(" C"));')
-        lines.append("  tft.setCursor(10, 100);")
-        lines.append('  tft.print(F("Humidity: ")); tft.print(h, 1); tft.println(F(" %"));')
-        lines.append("  delay(2000);")
-    elif "tft_ili9341" in comp_ids:
-        lines.append("  tft.fillScreen(ILI9341_BLACK);")
-        lines.append("  tft.setTextSize(2);")
-        lines.append("  tft.setCursor(10, 30);")
-        lines.append("  tft.setTextColor(ILI9341_CYAN);")
-        lines.append('  tft.println(F("CircuitForge TFT"));')
-        lines.append("  tft.setTextSize(1);")
-        lines.append("  tft.setCursor(10, 70);")
-        lines.append("  tft.setTextColor(ILI9341_WHITE);")
-        lines.append('  tft.print(F("Uptime: ")); tft.print(millis() / 1000); tft.println(F("s"));')
-        lines.append("  bool alarm = false;")
         lines.append("  delay(1000);")
     elif "dht22" in comp_ids and "potentiometer_10k" in comp_ids:
         lines.append("  delay(2000);")
@@ -629,27 +802,26 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
     elif "hc_sr04" in comp_ids and "potentiometer_10k" in comp_ids:
         lines.append("  int potRaw = analogRead(POT_PIN);")
         lines.append("  float dynamicDistThresh = 5.0 + (potRaw / 4095.0) * 45.0;")
-        lines.append("  digitalWrite(TRIG_PIN, LOW);")
-        lines.append("  delayMicroseconds(2);")
-        lines.append("  digitalWrite(TRIG_PIN, HIGH);")
-        lines.append("  delayMicroseconds(10);")
-        lines.append("  digitalWrite(TRIG_PIN, LOW);")
+        lines.append("  digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);")
+        lines.append("  digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN, LOW);")
         lines.append("  long duration = pulseIn(ECHO_PIN, HIGH, 30000);")
         lines.append("  float distanceCm = (duration > 0) ? (duration * 0.0343 / 2.0) : 999.0;")
         lines.append('  Serial.print(F("Distance: ")); Serial.print(distanceCm, 1); Serial.print(F(" cm | Thresh: ")); Serial.println(dynamicDistThresh, 1);')
         lines.append("  bool alarm = (distanceCm < dynamicDistThresh);")
         lines.append("  delay(200);")
     elif "hc_sr04" in comp_ids:
-        lines.append("  digitalWrite(TRIG_PIN, LOW);")
-        lines.append("  delayMicroseconds(2);")
-        lines.append("  digitalWrite(TRIG_PIN, HIGH);")
-        lines.append("  delayMicroseconds(10);")
-        lines.append("  digitalWrite(TRIG_PIN, LOW);")
+        lines.append("  digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);")
+        lines.append("  digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10); digitalWrite(TRIG_PIN, LOW);")
         lines.append("  long duration = pulseIn(ECHO_PIN, HIGH, 30000);")
         lines.append("  float distanceCm = (duration > 0) ? (duration * 0.0343 / 2.0) : 999.0;")
         lines.append('  Serial.print(F("Distance: ")); Serial.print(distanceCm, 1); Serial.println(F(" cm"));')
         lines.append("  bool alarm = (distanceCm < THRESHOLD_VAL);")
         lines.append("  delay(200);")
+    elif "slide_switch" in comp_ids:
+        lines.append("  bool sw = (digitalRead(SWITCH_PIN) == LOW);")
+        lines.append('  Serial.print(F("Switch State: ")); Serial.println(sw ? F("ACTIVE") : F("OFF"));')
+        lines.append("  bool alarm = sw;")
+        lines.append("  delay(100);")
     elif "push_button" in comp_ids:
         lines.append("  bool alarm = (digitalRead(BUTTON_PIN) == LOW); // Pressed")
         lines.append('  if (alarm) { Serial.println(F("Button Pressed!")); }')
@@ -659,20 +831,54 @@ def _deterministic_firmware(spec: ProjectSpec) -> str:
         lines.append('  Serial.print(F("Potentiometer value: ")); Serial.println(potVal);')
         lines.append("  bool alarm = (potVal > 2048);")
         lines.append("  delay(200);")
+    elif "mpu6050" in comp_ids:
+        lines.append("  sensors_event_t a, g, temp;")
+        lines.append("  mpu.getEvent(&a, &g, &temp);")
+        lines.append('  Serial.print(F("Accel X: ")); Serial.println(a.acceleration.x);')
+        lines.append("  bool alarm = (abs(a.acceleration.x) > 5.0);")
+        lines.append("  delay(200);")
     else:
         lines.append("  delay(1000);")
         lines.append("  bool alarm = false;")
 
-    # Actuators
+    # Actuators & Outputs
     has_actuator = False
     if "led_red" in comp_ids:
         lines.append("  digitalWrite(LED_PIN, alarm ? HIGH : LOW);")
         has_actuator = True
+    if "led_green" in comp_ids:
+        lines.append("  digitalWrite(LED_GREEN_PIN, alarm ? HIGH : LOW);")
+        has_actuator = True
+    if "led_blue" in comp_ids:
+        lines.append("  digitalWrite(LED_BLUE_PIN, alarm ? HIGH : LOW);")
+        has_actuator = True
+    if "rgb_led" in comp_ids:
+        lines.append("  digitalWrite(RGB_RED_PIN, alarm ? HIGH : LOW);")
+        lines.append("  digitalWrite(RGB_GREEN_PIN, alarm ? LOW : HIGH);")
+        lines.append("  digitalWrite(RGB_BLUE_PIN, LOW);")
+        has_actuator = True
     if "buzzer" in comp_ids:
         lines.append("  digitalWrite(BUZZER_PIN, alarm ? HIGH : LOW);")
         has_actuator = True
+    if "relay" in comp_ids:
+        lines.append("  digitalWrite(RELAY_PIN, alarm ? HIGH : LOW);")
+        has_actuator = True
+    if "servo" in comp_ids:
+        lines.append("  myServo.write(alarm ? 180 : 0);")
+        has_actuator = True
 
-    if not has_actuator and "tft_ili9341" not in comp_ids:
+    # Displays
+    if "lcd1602_i2c" in comp_ids:
+        lines.append("  lcd.setCursor(0, 1);")
+        lines.append('  lcd.print(alarm ? F("STATUS: ACTIVE! ") : F("STATUS: OK      "));')
+    if "ssd1306_i2c" in comp_ids:
+        lines.append("  display.clearDisplay(); display.setCursor(0, 10); display.setTextSize(1);")
+        lines.append(f'  display.println(F("{spec.name}"));')
+        lines.append("  display.setCursor(0, 30); display.setTextSize(2);")
+        lines.append('  display.println(alarm ? F("ALERT!") : F("NORMAL"));')
+        lines.append("  display.display();")
+
+    if not has_actuator and "tft_ili9341" not in comp_ids and "light_button" not in comp_ids:
         lines.append('  if (alarm) { Serial.println(F("[ALERT] Trigger condition active!")); }')
 
     lines.append("}")
@@ -692,7 +898,8 @@ def validate_firmware_against_spec(code: str, spec: ProjectSpec) -> tuple[bool, 
         errors.append("Missing setup() or loop() functions")
 
     # 2. Hallucinated components (MUST NOT be in code if NOT in spec)
-    if "led_red" not in comp_ids:
+    has_any_led = any(c in comp_ids for c in ["led_red", "led_green", "led_blue", "rgb_led", "light_button"])
+    if not has_any_led:
         if re.search(r'\bLED\b|\bLED_PIN\b|\bledPin\b|digitalWrite\s*\(\s*(?:LED_PIN|2\b)', code, re.IGNORECASE):
             errors.append("Hallucinated LED in firmware when LED is not in project components")
 
@@ -708,11 +915,11 @@ def validate_firmware_against_spec(code: str, spec: ProjectSpec) -> tuple[bool, 
         if re.search(r'\bTRIG_PIN\b|\bECHO_PIN\b|\bpulseIn\b', code, re.IGNORECASE):
             errors.append("Hallucinated Ultrasonic in firmware when HC-SR04 is not in project components")
 
-    if "potentiometer_10k" not in comp_ids:
+    if "potentiometer_10k" not in comp_ids and "photoresistor" not in comp_ids and "mq135" not in comp_ids:
         if re.search(r'\bPOT_PIN\b|\bpotPin\b', code, re.IGNORECASE):
             errors.append("Hallucinated Potentiometer in firmware when Potentiometer is not in project components")
 
-    if "push_button" not in comp_ids:
+    if "push_button" not in comp_ids and "light_button" not in comp_ids:
         if re.search(r'\bBUTTON_PIN\b|\bbuttonPin\b', code, re.IGNORECASE):
             errors.append("Hallucinated Button in firmware when Button is not in project components")
 
@@ -724,8 +931,12 @@ def validate_firmware_against_spec(code: str, spec: ProjectSpec) -> tuple[bool, 
         if re.search(r'<Adafruit_ILI9341\.h>|\btft\b|\bILI9341\b', code, re.IGNORECASE):
             errors.append("Hallucinated TFT display in firmware when TFT is not in project components")
 
-    if re.search(r'<SoftwareSerial\.h>|<Servo\.h>|myservo', code, re.IGNORECASE):
-        errors.append("Incompatible library (SoftwareSerial or Servo) for ESP32")
+    if "servo" not in comp_ids:
+        if re.search(r'ESP32Servo|myServo|SERVO_PIN', code, re.IGNORECASE):
+            errors.append("Hallucinated Servo in firmware when Servo is not in project components")
+
+    if re.search(r'<SoftwareSerial\.h>|(?<!ESP32)<Servo\.h>', code, re.IGNORECASE):
+        errors.append("Incompatible library (SoftwareSerial or AVR Servo) for ESP32")
 
     # 3. Missing required components (MUST be in code if in spec)
     if "hc_sr04" in comp_ids and not re.search(r'pulseIn|\bTRIG\b', code, re.IGNORECASE):
@@ -737,11 +948,23 @@ def validate_firmware_against_spec(code: str, spec: ProjectSpec) -> tuple[bool, 
     if "potentiometer_10k" in comp_ids and not re.search(r'analogRead', code, re.IGNORECASE):
         errors.append("Missing potentiometer analogRead logic")
 
+    if "photoresistor" in comp_ids and not re.search(r'analogRead|LDR', code, re.IGNORECASE):
+        errors.append("Missing photoresistor reading logic")
+
+    if "pir_motion" in comp_ids and not re.search(r'digitalRead|PIR', code, re.IGNORECASE):
+        errors.append("Missing PIR motion reading logic")
+
     if "mq135" in comp_ids and not re.search(r'analogRead', code, re.IGNORECASE):
         errors.append("Missing MQ-135 analogRead logic")
 
     if "tft_ili9341" in comp_ids and not re.search(r'Adafruit_ILI9341|tft\.begin', code, re.IGNORECASE):
         errors.append("Missing TFT display logic")
+
+    if "servo" in comp_ids and not re.search(r'myServo|Servo', code, re.IGNORECASE):
+        errors.append("Missing Servo control logic")
+
+    if "light_button" in comp_ids and not re.search(r'digitalRead|BUTTON_PIN', code, re.IGNORECASE):
+        errors.append("Missing light button logic")
 
     if "led_red" in comp_ids and not re.search(r'\bLED\b|\bled\b|digitalWrite', code, re.IGNORECASE):
         errors.append("Missing LED actuation logic")

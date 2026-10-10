@@ -312,6 +312,301 @@ TFT_ILI9341 = CatalogComponent(
 )
 
 
+# ── Photoresistor / Light Sensor (LDR) ─────────────────────────────────────────
+
+PHOTORESISTOR = CatalogComponent(
+    id="photoresistor",
+    name="Photoresistor (LDR Light Sensor)",
+    category="sensor",
+    wokwi_id="wokwi-photoresistor-sensor",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="VCC", description="3.3V Power", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+        ComponentPin(name="AO",  description="Analog Light Reading (ADC)", pin_type="analog", required=True),
+        ComponentPin(name="DO",  description="Digital Threshold Output", pin_type="digital", required=False),
+    ],
+    unit_price_inr=15.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Light Dependent Resistor module for detecting ambient light levels and illuminance",
+    electrical_constraints=["Connect AO to ADC1 pin (e.g. GPIO35)", "Resistance decreases with increased light"],
+)
+
+# ── PIR Motion Sensor ─────────────────────────────────────────────────────────
+
+PIR_MOTION = CatalogComponent(
+    id="pir_motion",
+    name="PIR Motion Sensor (HC-SR501)",
+    category="sensor",
+    wokwi_id="wokwi-pir-motion-sensor",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="VCC", description="Power supply 3.3V-5V", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+        ComponentPin(name="OUT", description="Digital Motion Signal (HIGH on motion)", pin_type="digital", required=True),
+    ],
+    unit_price_inr=95.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Pyroelectric infrared motion detector for human and intruder presence detection",
+    electrical_constraints=["3.3V digital output is directly compatible with ESP32 GPIO"],
+)
+
+# ── SG90 Micro Servo Motor ───────────────────────────────────────────────────
+
+SERVO = CatalogComponent(
+    id="servo",
+    name="SG90 Micro Servo Motor",
+    category="actuator",
+    wokwi_id="wokwi-servo",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="PWM", description="PWM Control Signal", pin_type="digital", required=True),
+        ComponentPin(name="VCC", description="5V Power (VIN)", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+    ],
+    libraries=["ESP32Servo"],
+    unit_price_inr=120.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="9g micro servo motor with 0 to 180 degree rotation control",
+    electrical_constraints=["Requires 5V (VIN) power for adequate torque; ESP32 GPIO13 for PWM signal"],
+)
+
+# ── SPDT Slide Switch ─────────────────────────────────────────────────────────
+
+SLIDE_SWITCH = CatalogComponent(
+    id="slide_switch",
+    name="SPDT Slide Switch",
+    category="input",
+    wokwi_id="wokwi-slide-switch",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="1", description="Terminal 1 (GND)", pin_type="ground", required=False),
+        ComponentPin(name="2", description="Common terminal (Signal)", pin_type="digital", required=True),
+        ComponentPin(name="3", description="Terminal 2 (VCC / Open)", pin_type="power", required=False),
+    ],
+    unit_price_inr=8.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Sub-miniature SPDT slide toggle switch for on/off circuit control",
+    electrical_constraints=["Use internal pull-up on common pin"],
+)
+
+# ── Light Button (Illuminated Push Button) ─────────────────────────────────────
+
+LIGHT_BUTTON = CatalogComponent(
+    id="light_button",
+    name="Light Button (Illuminated Push Button)",
+    category="input",
+    wokwi_id="wokwi-pushbutton",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="1.l",  description="Button Signal Input", pin_type="digital", required=True),
+        ComponentPin(name="1.r",  description="Button Signal Right", pin_type="digital", required=False),
+        ComponentPin(name="2.l",  description="Button Ground", pin_type="ground", required=True),
+        ComponentPin(name="2.r",  description="Button Ground Right", pin_type="ground", required=False),
+        ComponentPin(name="led+", description="Button LED Anode Indicator", pin_type="digital", required=True),
+        ComponentPin(name="led-", description="Button LED Cathode", pin_type="ground", required=True),
+    ],
+    unit_price_inr=25.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Tactile push button with integrated LED light indicator for interactive illumination control",
+    electrical_constraints=["Button signal requires INPUT_PULLUP; LED requires current limiting or GPIO driver"],
+)
+
+# ── 5V Relay Module ───────────────────────────────────────────────────────────
+
+RELAY = CatalogComponent(
+    id="relay",
+    name="5V Relay Module",
+    category="actuator",
+    wokwi_id="wokwi-relay-module",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="VCC", description="5V/3.3V Power", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+        ComponentPin(name="IN",  description="Control Signal", pin_type="digital", required=True),
+        ComponentPin(name="NO",  description="Normally Open", pin_type="signal", required=False),
+        ComponentPin(name="COM", description="Common Terminal", pin_type="signal", required=False),
+        ComponentPin(name="NC",  description="Normally Closed", pin_type="signal", required=False),
+    ],
+    unit_price_inr=65.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Electromechanical relay module for switching AC mains or high-power DC appliances",
+    electrical_constraints=["Active LOW or HIGH trigger; optical isolation built-in"],
+)
+
+# ── RGB LED (Common Cathode) ──────────────────────────────────────────────────
+
+RGB_LED = CatalogComponent(
+    id="rgb_led",
+    name="RGB LED (Common Cathode)",
+    category="output",
+    wokwi_id="wokwi-rgb-led",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="R",   description="Red Anode", pin_type="digital", required=True),
+        ComponentPin(name="G",   description="Green Anode", pin_type="digital", required=True),
+        ComponentPin(name="B",   description="Blue Anode", pin_type="digital", required=True),
+        ComponentPin(name="COM", description="Common Cathode (GND)", pin_type="ground", required=True),
+    ],
+    unit_price_inr=15.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="5mm diffused RGB LED for full-spectrum multi-color lighting and status indication",
+    electrical_constraints=["Current limit resistors 220Ω recommended on R, G, B channels"],
+)
+
+# ── Additional LEDs ───────────────────────────────────────────────────────────
+
+LED_GREEN = CatalogComponent(
+    id="led_green",
+    name="5mm Green LED",
+    category="output",
+    wokwi_id="wokwi-led",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="A", description="Anode (+)", pin_type="signal", required=True),
+        ComponentPin(name="C", description="Cathode (-)", pin_type="ground", required=True),
+    ],
+    unit_price_inr=3.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Standard 5mm green indicator LED",
+    electrical_constraints=["Forward voltage ~2.2V; 220Ω resistor required"],
+)
+
+LED_BLUE = CatalogComponent(
+    id="led_blue",
+    name="5mm Blue LED",
+    category="output",
+    wokwi_id="wokwi-led",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="A", description="Anode (+)", pin_type="signal", required=True),
+        ComponentPin(name="C", description="Cathode (-)", pin_type="ground", required=True),
+    ],
+    unit_price_inr=3.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Standard 5mm blue indicator LED",
+    electrical_constraints=["Forward voltage ~3.0V; 220Ω resistor required"],
+)
+
+RESISTOR_1K = CatalogComponent(
+    id="resistor_1k",
+    name="1kΩ Resistor",
+    category="passive",
+    wokwi_id="wokwi-resistor",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="1", description="Lead 1", pin_type="signal", required=True),
+        ComponentPin(name="2", description="Lead 2", pin_type="signal", required=True),
+    ],
+    unit_price_inr=2.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="1kΩ 1/4W through-hole carbon film resistor",
+    electrical_constraints=["Max 250mW power dissipation"],
+)
+
+# ── 16x2 Character LCD with I2C ───────────────────────────────────────────────
+
+LCD1602_I2C = CatalogComponent(
+    id="lcd1602_i2c",
+    name="16x2 I2C Character LCD Display",
+    category="display",
+    wokwi_id="wokwi-lcd1602",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+        ComponentPin(name="VCC", description="Power 5V/3.3V", pin_type="power", required=True),
+        ComponentPin(name="SDA", description="I2C Data", pin_type="digital", required=True),
+        ComponentPin(name="SCL", description="I2C Clock", pin_type="digital", required=True),
+    ],
+    libraries=["LiquidCrystal I2C"],
+    unit_price_inr=190.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="16x2 alphanumeric LCD with PCF8574 I2C backpack adapter (Address 0x27)",
+    electrical_constraints=["Connect SDA to GPIO21, SCL to GPIO22 on ESP32"],
+)
+
+# ── 0.96\" I2C OLED Display (SSD1306) ──────────────────────────────────────────
+
+SSD1306_I2C = CatalogComponent(
+    id="ssd1306_i2c",
+    name="0.96\" I2C OLED Display (SSD1306)",
+    category="display",
+    wokwi_id="wokwi-ssd1306",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+        ComponentPin(name="VCC", description="Power 3.3V", pin_type="power", required=True),
+        ComponentPin(name="SCL", description="I2C Clock", pin_type="digital", required=True),
+        ComponentPin(name="SDA", description="I2C Data", pin_type="digital", required=True),
+    ],
+    libraries=["Adafruit SSD1306", "Adafruit GFX Library"],
+    unit_price_inr=220.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="128x64 monochrome OLED graphic display module with I2C interface (Address 0x3C)",
+    electrical_constraints=["3.3V operation; connect SDA to GPIO21, SCL to GPIO22"],
+)
+
+# ── MPU6050 6-Axis Accelerometer / Gyroscope ──────────────────────────────────
+
+MPU6050 = CatalogComponent(
+    id="mpu6050",
+    name="MPU6050 6-Axis Accelerometer / Gyroscope",
+    category="sensor",
+    wokwi_id="wokwi-mpu6050",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="VCC", description="Power 3.3V", pin_type="power", required=True),
+        ComponentPin(name="GND", description="Ground", pin_type="ground", required=True),
+        ComponentPin(name="SCL", description="I2C Clock", pin_type="digital", required=True),
+        ComponentPin(name="SDA", description="I2C Data", pin_type="digital", required=True),
+        ComponentPin(name="INT", description="Interrupt Signal", pin_type="digital", required=False),
+    ],
+    libraries=["Adafruit MPU6050", "Adafruit Sensor"],
+    unit_price_inr=180.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="Triple-axis accelerometer and gyro sensor for orientation, motion, and tilt detection",
+    electrical_constraints=["I2C address 0x68; connect to ESP32 standard I2C pins"],
+)
+
+# ── 4x4 Membrane Matrix Keypad ────────────────────────────────────────────────
+
+MEMBRANE_KEYPAD = CatalogComponent(
+    id="membrane_keypad",
+    name="4x4 Membrane Matrix Keypad",
+    category="input",
+    wokwi_id="wokwi-membrane-keypad",
+    supported_boards=["esp32", "arduino_uno", "arduino_nano"],
+    pins=[
+        ComponentPin(name="R1", description="Row 1", pin_type="digital", required=True),
+        ComponentPin(name="R2", description="Row 2", pin_type="digital", required=True),
+        ComponentPin(name="R3", description="Row 3", pin_type="digital", required=True),
+        ComponentPin(name="R4", description="Row 4", pin_type="digital", required=True),
+        ComponentPin(name="C1", description="Column 1", pin_type="digital", required=True),
+        ComponentPin(name="C2", description="Column 2", pin_type="digital", required=True),
+        ComponentPin(name="C3", description="Column 3", pin_type="digital", required=True),
+        ComponentPin(name="C4", description="Column 4", pin_type="digital", required=True),
+    ],
+    unit_price_inr=75.0,
+    price_source="catalog_estimate",
+    price_verified_date="2025-01-01",
+    description="16-key matrix numeric keypad for PIN code entry and user input",
+    electrical_constraints=["8 digital GPIO lines required for row/column scanning"],
+)
+
+
 # ── Catalog Registry ──────────────────────────────────────────────────────────
 
 CATALOG: dict[str, CatalogComponent] = {
@@ -319,14 +614,28 @@ CATALOG: dict[str, CatalogComponent] = {
         ESP32_DEVKIT,
         DHT22,
         LED_RED,
+        LED_GREEN,
+        LED_BLUE,
+        RGB_LED,
         RESISTOR_220,
+        RESISTOR_1K,
         RESISTOR_10K,
         HC_SR04,
         BUZZER,
         PUSH_BUTTON,
+        LIGHT_BUTTON,
+        SLIDE_SWITCH,
         POTENTIOMETER,
+        PHOTORESISTOR,
+        PIR_MOTION,
         MQ135,
+        SERVO,
+        RELAY,
+        LCD1602_I2C,
+        SSD1306_I2C,
         TFT_ILI9341,
+        MPU6050,
+        MEMBRANE_KEYPAD,
     ]
 }
 

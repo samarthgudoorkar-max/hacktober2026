@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getSystemStatus, installModel, getErrorMessage } from '../utils/api'
+import { ThemeToggle } from '../components/ThemeToggle'
 import type { SystemStatus } from '../types'
 
 type StatusBadgeProps = { ok: boolean; label: string; extra?: string; error?: string }
@@ -58,6 +59,7 @@ export default function SetupPage() {
           <button onClick={load} className="btn-secondary text-sm">
             <RefreshCw className="w-4 h-4" /> Refresh
           </button>
+          <ThemeToggle />
         </div>
       </header>
 

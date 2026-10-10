@@ -526,6 +526,278 @@ const COMPONENT_METAS: Record<string, ComponentMeta> = {
       </g>
     ),
   },
+
+  'wokwi-photoresistor-sensor': {
+    width: 80,
+    height: 85,
+    title: 'Photoresistor (LDR Light Sensor)',
+    pins: [
+      { name: 'VCC', relX: 16, relY: 78, label: 'VCC', type: 'power' },
+      { name: 'GND', relX: 32, relY: 78, label: 'GND', type: 'ground' },
+      { name: 'DO',  relX: 48, relY: 78, label: 'DO',  type: 'digital' },
+      { name: 'AO',  relX: 64, relY: 78, label: 'AO',  type: 'analog' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={6} y={6} width={68} height={66} rx={5} fill="#0369a1" stroke={isSelected ? '#22d3ee' : '#0284c7'} strokeWidth={isSelected ? 3 : 1.5} />
+        <circle cx={14} cy={14} r={3} fill="#075985" stroke="#38bdf8" strokeWidth={0.5} />
+        {/* LDR Sensor Component on top */}
+        <circle cx={40} cy={26} r={14} fill="#fef08a" stroke="#ca8a04" strokeWidth={1.5} />
+        <path d="M 32,20 Q 40,24 48,20 Q 40,28 32,32 Q 40,36 48,32" fill="none" stroke="#dc2626" strokeWidth={1.8} />
+        {/* Potentiometer & IC */}
+        <rect x={14} y={45} width={10} height={10} rx={2} fill="#1e293b" />
+        <circle cx={19} cy={50} r={2.5} fill="#38bdf8" />
+        <rect x={32} y={46} width={16} height={10} rx={1} fill="#0f172a" />
+        <text x={40} y={66} fill="#e0f2fe" fontSize={7} fontWeight="bold" fontFamily="monospace" textAnchor="middle">LDR LIGHT</text>
+        {[16, 32, 48, 64].map((px) => (
+          <line key={px} x1={px} y1={72} x2={px} y2={78} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-pir-motion-sensor': {
+    width: 90,
+    height: 95,
+    title: 'PIR Motion Sensor (HC-SR501)',
+    pins: [
+      { name: 'VCC', relX: 20, relY: 88, label: 'VCC', type: 'power' },
+      { name: 'OUT', relX: 45, relY: 88, label: 'OUT', type: 'digital' },
+      { name: 'GND', relX: 70, relY: 88, label: 'GND', type: 'ground' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={6} y={6} width={78} height={76} rx={5} fill="#15803d" stroke={isSelected ? '#22d3ee' : '#16a34a'} strokeWidth={isSelected ? 3 : 1.5} />
+        {/* White Fresnel Dome */}
+        <circle cx={45} cy={40} r={26} fill="#f8fafc" stroke="#cbd5e1" strokeWidth={1.5} opacity={0.95} />
+        <circle cx={45} cy={40} r={18} fill="none" stroke="#94a3b8" strokeWidth={1} strokeDasharray="3,2" />
+        <circle cx={45} cy={40} r={10} fill="none" stroke="#64748b" strokeWidth={1} />
+        <text x={45} y={74} fill="#bbf7d0" fontSize={7} fontWeight="bold" fontFamily="monospace" textAnchor="middle">PIR MOTION</text>
+        {[20, 45, 70].map((px) => (
+          <line key={px} x1={px} y1={82} x2={px} y2={88} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-servo': {
+    width: 110,
+    height: 90,
+    title: 'SG90 Micro Servo Motor',
+    pins: [
+      { name: 'GND', relX: 30, relY: 84, label: 'GND', type: 'ground' },
+      { name: 'VCC', relX: 55, relY: 84, label: 'VCC', type: 'power' },
+      { name: 'PWM', relX: 80, relY: 84, label: 'PWM', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        {/* Servo Blue Body */}
+        <rect x={10} y={15} width={90} height={60} rx={4} fill="#0284c7" stroke={isSelected ? '#22d3ee' : '#0369a1'} strokeWidth={isSelected ? 3 : 1.5} />
+        {/* Gear Horn Shaft */}
+        <circle cx={35} cy={35} r={14} fill="#0369a1" stroke="#38bdf8" strokeWidth={1.5} />
+        <circle cx={35} cy={35} r={8} fill="#f8fafc" stroke="#cbd5e1" strokeWidth={1} />
+        {/* Servo White Arm */}
+        <rect x={31} y={8} width={8} height={54} rx={4} fill="#f8fafc" stroke="#94a3b8" strokeWidth={1} />
+        <circle cx={35} cy={14} r={2} fill="#334155" />
+        <circle cx={35} cy={56} r={2} fill="#334155" />
+        <text x={75} y={45} fill="#f0f9ff" fontSize={9} fontWeight="bold" fontFamily="monospace" textAnchor="middle">SG90</text>
+        <text x={75} y={58} fill="#bae6fd" fontSize={7} fontFamily="monospace" textAnchor="middle">SERVO</text>
+        {[30, 55, 80].map((px) => (
+          <line key={px} x1={px} y1={75} x2={px} y2={84} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-slide-switch': {
+    width: 60,
+    height: 55,
+    title: 'SPDT Slide Switch',
+    pins: [
+      { name: '1', relX: 15, relY: 48, label: '1', type: 'ground' },
+      { name: '2', relX: 30, relY: 48, label: '2', type: 'digital' },
+      { name: '3', relX: 45, relY: 48, label: '3', type: 'power' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={8} y={8} width={44} height={34} rx={3} fill="#64748b" stroke={isSelected ? '#22d3ee' : '#475569'} strokeWidth={isSelected ? 2.5 : 1.5} />
+        {/* Switch Lever */}
+        <rect x={16} y={14} width={14} height={22} rx={2} fill="#0f172a" stroke="#334155" strokeWidth={1} />
+        <line x1={20} y1={18} x2={20} y2={32} stroke="#94a3b8" strokeWidth={1.5} />
+        <line x1={26} y1={18} x2={26} y2={32} stroke="#94a3b8" strokeWidth={1.5} />
+        {[15, 30, 45].map((px) => (
+          <line key={px} x1={px} y1={42} x2={px} y2={48} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-relay-module': {
+    width: 95,
+    height: 90,
+    title: '5V Relay Module',
+    pins: [
+      { name: 'VCC', relX: 18, relY: 84, label: 'VCC', type: 'power' },
+      { name: 'GND', relX: 34, relY: 84, label: 'GND', type: 'ground' },
+      { name: 'IN',  relX: 50, relY: 84, label: 'IN',  type: 'digital' },
+      { name: 'NO',  relX: 78, relY: 12, label: 'NO',  type: 'signal' },
+      { name: 'COM', relX: 78, relY: 34, label: 'COM', type: 'signal' },
+      { name: 'NC',  relX: 78, relY: 56, label: 'NC',  type: 'signal' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={6} y={6} width={83} height={72} rx={5} fill="#1e293b" stroke={isSelected ? '#22d3ee' : '#334155'} strokeWidth={isSelected ? 3 : 1.5} />
+        {/* Blue Relay Box */}
+        <rect x={12} y={12} width={50} height={50} rx={3} fill="#0284c7" stroke="#0369a1" strokeWidth={1} />
+        <text x={37} y={32} fill="#ffffff" fontSize={8} fontWeight="bold" fontFamily="monospace" textAnchor="middle">RELAY</text>
+        <text x={37} y={45} fill="#bae6fd" fontSize={6} fontFamily="monospace" textAnchor="middle">10A 250VAC</text>
+        {/* Screw Terminal Block */}
+        <rect x={68} y={8} width={18} height={58} rx={2} fill="#15803d" />
+        <circle cx={77} cy={18} r={3} fill="#475569" />
+        <circle cx={77} cy={37} r={3} fill="#475569" />
+        <circle cx={77} cy={56} r={3} fill="#475569" />
+        {[18, 34, 50].map((px) => (
+          <line key={px} x1={px} y1={78} x2={px} y2={84} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-rgb-led': {
+    width: 60,
+    height: 85,
+    title: 'RGB Diffused LED',
+    pins: [
+      { name: 'R',   relX: 12, relY: 80, label: 'R',   type: 'digital' },
+      { name: 'COM', relX: 24, relY: 80, label: 'GND', type: 'ground' },
+      { name: 'G',   relX: 36, relY: 80, label: 'G',   type: 'digital' },
+      { name: 'B',   relX: 48, relY: 80, label: 'B',   type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        {/* Diffused bulb dome */}
+        <path d="M 16,36 C 16,14 44,14 44,36 L 44,42 L 16,42 Z" fill="#f8fafc" stroke={isSelected ? '#22d3ee' : '#94a3b8'} strokeWidth={isSelected ? 2.5 : 1.5} opacity={0.9} />
+        <circle cx={24} cy={32} r={3} fill="#ef4444" opacity={0.7} />
+        <circle cx={30} cy={26} r={3} fill="#22c55e" opacity={0.7} />
+        <circle cx={36} cy={32} r={3} fill="#3b82f6" opacity={0.7} />
+        {/* 4 Leads */}
+        <line x1={12} y1={42} x2={12} y2={80} stroke="#ef4444" strokeWidth={2} />
+        <line x1={24} y1={42} x2={24} y2={80} stroke="#64748b" strokeWidth={2.5} />
+        <line x1={36} y1={42} x2={36} y2={80} stroke="#22c55e" strokeWidth={2} />
+        <line x1={48} y1={42} x2={48} y2={80} stroke="#3b82f6" strokeWidth={2} />
+      </g>
+    ),
+  },
+
+  'wokwi-lcd1602': {
+    width: 170,
+    height: 90,
+    title: '16x2 Character LCD (I2C)',
+    pins: [
+      { name: 'GND', relX: 20, relY: 84, label: 'GND', type: 'ground' },
+      { name: 'VCC', relX: 35, relY: 84, label: 'VCC', type: 'power' },
+      { name: 'SDA', relX: 50, relY: 84, label: 'SDA', type: 'digital' },
+      { name: 'SCL', relX: 65, relY: 84, label: 'SCL', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={4} width={162} height={74} rx={4} fill="#1e3a5f" stroke={isSelected ? '#22d3ee' : '#2563eb'} strokeWidth={isSelected ? 3 : 1.5} />
+        {/* Screen Bezel */}
+        <rect x={14} y={12} width={142} height={46} rx={3} fill="#0284c7" stroke="#0369a1" strokeWidth={1} />
+        {/* Active Character LCD Area */}
+        <rect x={18} y={16} width={134} height={38} rx={2} fill="#0369a1" />
+        <text x={85} y={32} fill="#e0f2fe" fontSize={9} fontWeight="bold" fontFamily="monospace" textAnchor="middle">CircuitForge AI</text>
+        <text x={85} y={47} fill="#bae6fd" fontSize={8} fontFamily="monospace" textAnchor="middle">16x2 I2C 0x27</text>
+        {[20, 35, 50, 65].map((px) => (
+          <line key={px} x1={px} y1={78} x2={px} y2={84} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-ssd1306': {
+    width: 95,
+    height: 85,
+    title: '0.96" I2C OLED Display (SSD1306)',
+    pins: [
+      { name: 'GND', relX: 18, relY: 8, label: 'GND', type: 'ground' },
+      { name: 'VCC', relX: 36, relY: 8, label: 'VCC', type: 'power' },
+      { name: 'SCL', relX: 54, relY: 8, label: 'SCL', type: 'digital' },
+      { name: 'SDA', relX: 72, relY: 8, label: 'SDA', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={12} width={87} height={68} rx={5} fill="#1e293b" stroke={isSelected ? '#22d3ee' : '#334155'} strokeWidth={isSelected ? 3 : 1.5} />
+        {/* OLED Screen Area */}
+        <rect x={10} y={22} width={75} height={50} rx={2} fill="#020617" />
+        <text x={47} y={42} fill="#38bdf8" fontSize={8} fontWeight="bold" fontFamily="monospace" textAnchor="middle">SSD1306</text>
+        <text x={47} y={56} fill="#22c55e" fontSize={7} fontFamily="monospace" textAnchor="middle">128x64 OLED</text>
+        {[18, 36, 54, 72].map((px) => (
+          <line key={px} x1={px} y1={8} x2={px} y2={14} stroke="#cbd5e1" strokeWidth={2.5} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-mpu6050': {
+    width: 85,
+    height: 80,
+    title: 'MPU6050 Accelerometer / Gyroscope',
+    pins: [
+      { name: 'VCC', relX: 14, relY: 74, label: 'VCC', type: 'power' },
+      { name: 'GND', relX: 28, relY: 74, label: 'GND', type: 'ground' },
+      { name: 'SCL', relX: 42, relY: 74, label: 'SCL', type: 'digital' },
+      { name: 'SDA', relX: 56, relY: 74, label: 'SDA', type: 'digital' },
+      { name: 'INT', relX: 70, relY: 74, label: 'INT', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={4} y={6} width={77} height={62} rx={4} fill="#0284c7" stroke={isSelected ? '#22d3ee' : '#0369a1'} strokeWidth={isSelected ? 3 : 1.5} />
+        <circle cx={10} cy={12} r={2.5} fill="#075985" />
+        {/* MPU chip */}
+        <rect x={28} y={20} width={28} height={28} rx={2} fill="#0f172a" stroke="#334155" strokeWidth={1} />
+        <text x={42} y={36} fill="#f8fafc" fontSize={6} fontWeight="bold" fontFamily="monospace" textAnchor="middle">MPU</text>
+        <text x={42} y={44} fill="#94a3b8" fontSize={5} fontFamily="monospace" textAnchor="middle">6050</text>
+        {[14, 28, 42, 56, 70].map((px) => (
+          <line key={px} x1={px} y1={68} x2={px} y2={74} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
+
+  'wokwi-membrane-keypad': {
+    width: 110,
+    height: 120,
+    title: '4x4 Matrix Membrane Keypad',
+    pins: [
+      { name: 'R1', relX: 14, relY: 114, label: 'R1', type: 'digital' },
+      { name: 'R2', relX: 26, relY: 114, label: 'R2', type: 'digital' },
+      { name: 'R3', relX: 38, relY: 114, label: 'R3', type: 'digital' },
+      { name: 'R4', relX: 50, relY: 114, label: 'R4', type: 'digital' },
+      { name: 'C1', relX: 62, relY: 114, label: 'C1', type: 'digital' },
+      { name: 'C2', relX: 74, relY: 114, label: 'C2', type: 'digital' },
+      { name: 'C3', relX: 86, relY: 114, label: 'C3', type: 'digital' },
+      { name: 'C4', relX: 98, relY: 114, label: 'C4', type: 'digital' },
+    ],
+    render: (part, isSelected) => (
+      <g>
+        <rect x={6} y={6} width={98} height={102} rx={6} fill="#1e293b" stroke={isSelected ? '#22d3ee' : '#475569'} strokeWidth={isSelected ? 3 : 1.5} />
+        {['1','2','3','A','4','5','6','B','7','8','9','C','*','0','#','D'].map((k, i) => {
+          const col = i % 4
+          const row = Math.floor(i / 4)
+          return (
+            <g key={k}>
+              <rect x={14 + col * 21} y={12 + row * 22} width={17} height={17} rx={2} fill="#334155" stroke="#475569" strokeWidth={1} />
+              <text x={22.5 + col * 21} y={24 + row * 22} fill={/[A-D*#]/.test(k) ? '#f59e0b' : '#f8fafc'} fontSize={8} fontWeight="bold" fontFamily="monospace" textAnchor="middle">{k}</text>
+            </g>
+          )
+        })}
+        {[14, 26, 38, 50, 62, 74, 86, 98].map((px) => (
+          <line key={px} x1={px} y1={108} x2={px} y2={114} stroke="#cbd5e1" strokeWidth={2} strokeLinecap="round" />
+        ))}
+      </g>
+    ),
+  },
 }
 
 // Fallback generic component

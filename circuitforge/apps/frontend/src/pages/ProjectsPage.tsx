@@ -4,6 +4,7 @@ import { Cpu, Plus, Trash2, ExternalLink, Clock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { listProjects, deleteProject, getErrorMessage } from '../utils/api'
 import { STATUS_LABELS, STATUS_CLASS, SIM_LABELS, formatDate } from '../utils/helpers'
+import { ThemeToggle } from '../components/ThemeToggle'
 import type { ProjectSummary } from '../types'
 
 export default function ProjectsPage() {
@@ -47,6 +48,7 @@ export default function ProjectsPage() {
           <Link to="/" className="btn-primary text-sm">
             <Plus className="w-4 h-4" /> New Project
           </Link>
+          <ThemeToggle />
         </div>
       </header>
 

@@ -40,15 +40,29 @@ def _potentiometer_attrs(value: str = "0.5") -> dict:
 
 COMPONENT_ATTRS: dict[str, callable] = {
     "resistor_220": lambda inst: _resistor_attrs("220"),
+    "resistor_1k": lambda inst: _resistor_attrs("1000"),
     "resistor_10k": lambda inst: _resistor_attrs("10000"),
     "led_red": lambda inst: _led_attrs("red"),
+    "led_green": lambda inst: _led_attrs("green"),
+    "led_blue": lambda inst: _led_attrs("blue"),
+    "rgb_led": lambda inst: {},
     "dht22": lambda inst: _dht22_attrs(),
     "hc_sr04": lambda inst: _hcsr04_attrs(),
     "buzzer": lambda inst: _buzzer_attrs(),
     "push_button": lambda inst: {},
+    "light_button": lambda inst: {"color": "green"},
+    "slide_switch": lambda inst: {},
     "potentiometer_10k": lambda inst: _potentiometer_attrs(),
+    "photoresistor": lambda inst: {"lux": "500"},
+    "pir_motion": lambda inst: {},
     "mq135": lambda inst: {},
+    "servo": lambda inst: {},
+    "relay": lambda inst: {},
+    "lcd1602_i2c": lambda inst: {"pins": "i2c"},
+    "ssd1306_i2c": lambda inst: {},
     "tft_ili9341": lambda inst: {},
+    "mpu6050": lambda inst: {},
+    "membrane_keypad": lambda inst: {},
 }
 
 # Layout positions for parts — space them horizontally

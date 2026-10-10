@@ -106,3 +106,98 @@
 .spinner {
   animation: spin 0.8s linear infinite;
 }
+
+/* Light Mode Overrides */
+html.light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.light body {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+html.light .circuit-bg {
+  background-color: #f8fafc;
+  background-image: 
+    linear-gradient(rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.08) 1px, transparent 1px);
+}
+
+html.light header {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: #e2e8f0;
+}
+
+html.light .forge-card {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+html.light .forge-input {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+html.light .forge-input::placeholder {
+  color: #94a3b8;
+}
+
+html.light .btn-secondary {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+html.light .btn-secondary:hover {
+  background-color: #f1f5f9;
+}
+
+html.light .bg-gray-950 {
+  background-color: #f8fafc;
+}
+
+html.light .bg-gray-900 {
+  background-color: #ffffff;
+}
+
+html.light .bg-gray-800 {
+  background-color: #f1f5f9;
+}
+
+html.light .bg-gray-900\/80 {
+  background-color: rgba(255, 255, 255, 0.88);
+}
+
+html.light .border-gray-800,
+html.light .border-gray-700 {
+  border-color: #e2e8f0;
+}
+
+html.light .text-white {
+  color: #0f172a;
+}
+
+html.light .text-gray-200 {
+  color: #1e293b;
+}
+
+html.light .text-gray-300 {
+  color: #334155;
+}
+
+html.light .text-gray-400 {
+  color: #64748b;
+}
+
+html.light .text-gray-500 {
+  color: #64748b;
+}
+
+html.light .terminal-bg {
+  background-color: #0f172a;
+  color: #4ade80;
+}
