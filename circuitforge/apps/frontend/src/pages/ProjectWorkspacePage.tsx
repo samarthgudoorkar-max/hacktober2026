@@ -73,7 +73,8 @@ export default function ProjectWorkspacePage() {
     runOp('compile', async () => {
       const r = await compileProject(id!)
       setCompileResult(r)
-      if (r.success) toast.success('Compilation succeeded!')
+      const isSuccess = r?.success ?? r?.compilation_success
+      if (isSuccess) toast.success('Compilation succeeded!')
       else toast.error('Compilation failed — check logs')
       return r
     }, 'compile')
@@ -81,14 +82,20 @@ export default function ProjectWorkspacePage() {
     runOp('repair', async () => {
       const r = await repairProject(id!)
       setCompileResult(r)
-      if (r.compile_success) toast.success('Repair successful!')
-      else toast.error(`Repair attempt ${r.attempt_number} failed`)
+      const isSuccess = r?.compile_success ?? r?.success
+      if (isSuccess) toast.success('Repair successful!')
+      else toast.error(`Repair attempt ${r?.attempt_number || 1} failed`)
       return r
     }, 'repair')
   const handleSimulate = () =>
     runOp('simulate', async () => {
       const r = await simulateProject(id!)
       setSimResult(r)
+      if (r?.simulation_status === 'simulation_passed' || r?.exit_code === 0) {
+        toast.success('Simulation passed successfully!')
+      } else if (r?.error) {
+        toast.error(`Simulation failed: ${r.error}`)
+      }
       return r
     }, 'simulate')
 
@@ -124,7 +131,7 @@ export default function ProjectWorkspacePage() {
     { id: 'firmware',   label: 'Firmware',   icon: Code2,       show: !!project.firmware_code },
     { id: 'diagram',    label: 'Diagram',    icon: CircuitIcon, show: !!project.diagram_json },
     { id: 'validation', label: 'Validation', icon: CheckCircle, show: !!project.validation_result },
-    { id: 'compile',    label: 'Compile',    icon: Terminal,    show: !!project.compilation_log },
+    { id: 'compile',    label: 'Compile',    icon: Terminal,    show: !!project.compilation_log || !!compileResult },
     { id: 'simulate',   label: 'Simulate',   icon: Play,        show: true },
     { id: 'bom',        label: 'BOM',        icon: Package,     show: !!project.bom },
     { id: 'repair',     label: 'Repair',     icon: Wrench,      show: project.repair_attempts.length > 0 },
@@ -526,29 +533,34 @@ function ValidationTab({ project }: { project: Project }) {
 }
 
 function CompileTab({ project, result }: { project: Project; result: any }) {
-  const log = project.compilation_log
-  const displayResult = result || (log ? { success: project.compilation_success } : null)
+  const log = project.compilation_log || result?.stdout || result?.log
+  const displayResult = result || (project.compilation_success !== null && project.compilation_success !== undefined ? { success: project.compilation_success } : null)
+  const isSuccess = displayResult ? (displayResult.success ?? displayResult.compilation_success) : null
+
   return (
     <div className="space-y-4">
-      {displayResult && (
-        <div className={`forge-card p-4 ${displayResult.success ? 'border-green-900/50' : 'border-red-900/50'}`}>
+      {displayResult && isSuccess !== null && (
+        <div className={`forge-card p-4 ${isSuccess ? 'border-green-900/50' : 'border-red-900/50'}`}>
           <div className="flex items-center gap-2">
-            {displayResult.success
+            {isSuccess
               ? <CheckCircle className="w-5 h-5 text-green-400" />
               : <XCircle className="w-5 h-5 text-red-400" />
             }
-            <span className={`font-semibold ${displayResult.success ? 'text-green-400' : 'text-red-400'}`}>
-              {displayResult.success ? 'Compilation Succeeded' : 'Compilation Failed'}
+            <span className={`font-semibold ${isSuccess ? 'text-green-400' : 'text-red-400'}`}>
+              {isSuccess ? 'Compilation Succeeded' : 'Compilation Failed'}
             </span>
-            {displayResult.exit_code !== undefined && (
-              <span className="text-xs text-gray-600 ml-auto">exit code: {displayResult.exit_code}</span>
-            )}
+            <span className="text-xs text-gray-500 ml-auto">
+              arduino-cli v0.35.3 (Target: ESP32)
+            </span>
           </div>
         </div>
       )}
       {log ? (
         <div className="forge-card overflow-hidden">
-          <div className="px-4 py-2 border-b border-gray-800 text-sm text-gray-400 font-mono">Compiler Output</div>
+          <div className="px-4 py-2 border-b border-gray-800 text-sm text-gray-400 font-mono flex items-center justify-between">
+            <span>Compiler Output</span>
+            <span className="text-xs text-gray-500">sketch.ino</span>
+          </div>
           <pre className="terminal-bg max-h-[60vh] overflow-auto text-xs whitespace-pre-wrap">{log}</pre>
         </div>
       ) : (
@@ -559,6 +571,9 @@ function CompileTab({ project, result }: { project: Project; result: any }) {
 }
 
 function SimulateTab({ project, result, onSimulate, opLoading }: { project: Project; result: any; onSimulate: () => void; opLoading: string | null }) {
+  const simLog = result?.stdout || result?.serial_log || project.simulation_log
+  const isPassed = project.simulation_status === 'simulation_passed' || result?.simulation_status === 'simulation_passed'
+
   return (
     <div className="space-y-4">
       <div className="forge-card p-5">
@@ -578,7 +593,7 @@ function SimulateTab({ project, result, onSimulate, opLoading }: { project: Proj
           disabled={!!opLoading || !project.firmware_code}
         >
           {opLoading === 'simulate' ? <Loader2 className="w-4 h-4 spinner" /> : <Play className="w-4 h-4" />}
-          {opLoading === 'simulate' ? 'Simulating via Wokwi CLI...' : 'Run Wokwi Simulation'}
+          {opLoading === 'simulate' ? 'Simulating via Wokwi CLI...' : isPassed ? 'Re-run Wokwi Simulation' : 'Run Wokwi Simulation'}
         </button>
       </div>
 
@@ -611,15 +626,21 @@ function SimulateTab({ project, result, onSimulate, opLoading }: { project: Proj
         </div>
       )}
 
-      {result && result.mode !== 'manual' && result.stdout && (
+      {simLog && (
         <div className="forge-card overflow-hidden">
           <div className="px-4 py-2 border-b border-gray-800 text-sm text-gray-300 flex items-center justify-between font-mono">
-            <span>Wokwi Simulation Logs</span>
-            {result.exit_code !== undefined && (
-              <span className="text-xs text-gray-500">Exit Code: {result.exit_code}</span>
-            )}
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+              Wokwi Virtual Serial Monitor (UART0)
+            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">Baud: 115200</span>
+              {result?.exit_code !== undefined && (
+                <span className="text-xs text-gray-500">Exit Code: {result.exit_code}</span>
+              )}
+            </div>
           </div>
-          <pre className="terminal-bg max-h-96 overflow-auto text-xs whitespace-pre-wrap">{result.stdout}</pre>
+          <pre className="terminal-bg max-h-96 overflow-auto text-xs whitespace-pre-wrap font-mono">{simLog}</pre>
         </div>
       )}
 

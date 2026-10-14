@@ -143,8 +143,11 @@ def _wokwi_env() -> dict:
     token = os.environ.get("WOKWI_CLI_TOKEN")
     if not token:
         token_file = Path.home() / ".wokwi" / "token"
-        if token_file.exists():
-            token = token_file.read_text(encoding="utf-8").strip()
+        try:
+            if token_file.exists():
+                token = token_file.read_text(encoding="utf-8").strip()
+        except Exception:
+            pass
     if not token:
         token = "wok_q5bxKPuDTsWXBh67bkI56ZbWDOf5OPMBa2e20aca"
     env["WOKWI_CLI_TOKEN"] = token

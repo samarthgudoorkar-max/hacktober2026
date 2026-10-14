@@ -111,6 +111,7 @@ export interface Project {
   validation_result?: ValidationResult
   compilation_success?: boolean
   compilation_log?: string
+  simulation_log?: string
   repair_attempts: RepairAttempt[]
   bom?: BOM
   created_at: string
