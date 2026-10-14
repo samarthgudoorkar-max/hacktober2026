@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CircuitForge AI</title>
+    <script>
+      // Single Page Apps for GitHub Pages
+      // Redirects 404 paths to HashRouter
+      var path = window.location.pathname;
+      var repo = '/hacktober2026';
+      if (path.startsWith(repo)) {
+        path = path.slice(repo.length);
+      }
+      if (path && path !== '/' && path !== '/index.html') {
+        window.location.replace(repo + '/#' + path + window.location.search);
+      } else {
+        window.location.replace(repo + '/' + window.location.search);
+      }
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to <a href="./">CircuitForge AI</a>...</p>
+  </body>
+</html>
